@@ -18,6 +18,32 @@ The response they get out excludes the patch
 (defvar my-coding-assistant-chat-buffer
   "Buffer for the coding assistant chat.")
 
+(defcustom gpt-copilot-window-size 0.33
+  "Size of the GPT Copilot chat window as a fraction of the frame.
+Must be a number between 0 and 1, exclusive."
+  :type 'float
+  :group 'gpt-copilot
+  :set (lambda (symbol value)
+         (if (and (numberp value)
+                  (< 0 value 1))
+             (set-default symbol value)
+           (user-error "gpt-copilot-window-size must be a number between 0 and 1, exclusive")))
+  :initialize 'custom-initialize-default)
+
+
+(defvar gpt-copilot-window-orientation 'vertical
+  "Orientation of the GPT Copilot chat window. Can be 'vertical or 'horizontal.")
+
+(define-minor-mode gpt-copilot-mode
+  "Minor mode for GPT Copilot integration."
+  :lighter " GPT-Copilot"
+  :keymap (let ((map (make-sparse-keymap)))
+            (define-key map (kbd "C-c C-g") #'gptel-copilot-query)
+            map))
+
+(defvar my-coding-assistant-chat-buffer
+  "Buffer for the coding assistant chat.")
+
 (defvar gpt-base-prompt
   (concat
    ;; The prompt is originally from avante.nvim:
@@ -57,43 +83,42 @@ The response they get out excludes the patch
    "from the very first to the very last. Double-check every range before finalizing your response, paying special attention\n"
    "to the start_line to ensure it hasn't shifted down. Ensure that your line numbers perfectly match the original code structure without any overall shift."))
 
-(defun gpt-copilot (prompt)
-  (interactive (list (read-string "Ask GPT: " nil gptel-lookup--history)))
-  (when (string= prompt "") (user-error "A prompt is required."))
-  prompt)
-
-(defun gpt-copilot-wrapper ()
-  (call-interactively #'gpt-copilot))
-
 (defun gpt-copilot-setup-windows ()
-  "Set up the coding assistant layout with the chat window occupying 1/3 of the screen."
-  ;; TODO variable for the size, variable for 'horizontal or 'vertical
+  "Set up the coding assistant layout with the chat window."
   (interactive)
   (delete-other-windows)
   (let* ((main-buffer (current-buffer))
-         (frame-width (frame-width))
          (main-window (selected-window))
-         (main-window-width (floor (* frame-width 0.67))))
+         (split-size (floor (* (if (eq gpt-copilot-window-orientation 'vertical)
+                                   (frame-width)
+                                 (frame-height))
+                               (- 1 gpt-copilot-window-size)))))
     (setq gpt-copilot-chat-buffer
           (gptel "*gptel-Copilot*"))
-
-    ;; TODO apply the minor mode
-    (split-window-right main-window-width)
+    (with-current-buffer gpt-copilot-chat-buffer
+      (gpt-copilot-mode 1))
+    (if (eq gpt-copilot-window-orientation 'vertical)
+        (split-window-right split-size)
+      (split-window-below split-size))
     (set-window-buffer main-window main-buffer)
     (other-window 1)
     (set-window-buffer (selected-window) gpt-copilot-chat-buffer)))
 
 (defun gptel-copilot-query (user-query)
-  "Send a query to the GPTel Copilot from the current code buffer."
+  "Send a query to the GPTel Copilot from the current buffer."
   (interactive "sUser Query: ")
   (unless (buffer-live-p gpt-copilot-chat-buffer)
-    (gptel-copilot-setup-windows))
-  ;; TODO let it be the other buffer if we're in the chat buffer currently
-  (let* ((code-buffer (current-buffer))
-         (selected-code (if (use-region-p)
-                            (buffer-substring-no-properties (region-beginning) (region-end))
-                          (buffer-substring-no-properties (point-min) (point-max))))
-         (file-type (symbol-name major-mode))
+    (gpt-copilot-setup-windows))
+  ;; TODO need to make code-buffer more robust
+  (let* ((code-buffer (if (eq (current-buffer) gpt-copilot-chat-buffer)
+                          (window-buffer (next-window))
+                        (current-buffer)))
+         (selected-code (with-current-buffer code-buffer
+                          (if (use-region-p)
+                              (buffer-substring-no-properties (region-beginning) (region-end))
+                            (buffer-substring-no-properties (point-min) (point-max)))))
+         (file-type (with-current-buffer code-buffer
+                      (symbol-name major-mode)))
          (full-query (format "%s\n\nFile type: %s\n\nCode:\n%s\n\n%s"
                              gpt-base-prompt
                              file-type
@@ -105,7 +130,6 @@ The response they get out excludes the patch
       (gptel-request
           full-query
         :callback #'gptel-copilot-handle-response
-        ;; TODO Does this mean that we're sending the whole buffer every time?
         :buffer code-buffer
         :position (point-marker)))))
 
@@ -146,7 +170,6 @@ The response they get out excludes the patch
 
 (defun gpt-copilot-apply-patch (patch code-buffer)
   "Apply the git patch to the current buffer using git apply."
-
   (message patch)
   (let ((process-environment (cons "GIT_DIFF_OPTS=--unified=3" process-environment))
         (default-directory (or (vc-git-root default-directory)
