@@ -10,6 +10,7 @@ The response they get out excludes the patch
 ;; TODO easily save and reload the AI memory
 ;; TODO Function to toggle the gptel copilot
 ;; TODO ability to just send a region, not the whole buffer
+;; TODO make sure the entire buffer is sent
 (require 'cl-generic)
 
 (defvar gptel-lookup--history nil)
@@ -19,6 +20,8 @@ The response they get out excludes the patch
 
 (defvar gpt-base-prompt
   (concat
+   ;; The prompt is originally from avante.nvim:
+   ;; https://github.com/yetone/avante.nvim/blob/main/lua/avante/llm.lua
    "Your primary task is to suggest code modifications by creating a git patch. Follow these instructions meticulously:\n\n"
    "1. Carefully analyze the original code, paying close attention to its structure and line numbers. Line numbers start from 1 and include ALL lines, even empty ones.\n\n"
    "2. When suggesting modifications:\n"
@@ -27,26 +30,23 @@ The response they get out excludes the patch
    "   c. Make absolutely certain that the code you provide is in the format of a git patch\n"
    "   d. Provide the exact code snippet to be replaced using this format:\n\n"
    "Git patch:\n"
-   "```{{language}}\n"
+   "```\n"
    "{{suggested_code}}\n"
    "```\n\n"
-   "3. Crucial guidelines for suggested code snippets:\n"
-   "   - Only apply the change(s) suggested by the most recent assistant message (before your generation).\n"
+
+   "{{In-depth explanation of each change}}\n"
+   "The git patch should be the first thing in the response, followed by the explanation"
+   "4. Crucial guidelines for suggested code snippets:\n"
+   "   - Only apply the change(s) suggested by the most recent message (before your generation).\n"
    "   - Do not make any unrelated changes to the code.\n"
-   "   - Produce a valid full rewrite of the entire original file without skipping any lines. Do not be lazy!\n"
    "   - Do not arbitrarily delete pre-existing comments/empty Lines.\n"
-   "   - Do not omit large parts of the original file for no reason.\n"
    "   - Do not omit any needed changes from the requisite messages/code blocks.\n"
    "   - If there is a clicked code block, bias towards just applying that (and applying other changes implied).\n"
    "   - Please keep your suggested code changes minimal, and do not include irrelevant lines in the code snippet.\n\n"
-   "4. Crucial guidelines for line numbers:\n"
-   "   - The content regarding line numbers MUST strictly follow the format \"Replace lines: {{start_line}}-{{end_line}}\". Do not be lazy!\n"
-   "   - The range {{start_line}}-{{end_line}} is INCLUSIVE. Both start_line and end_line are included in the replacement.\n"
-   "   - Count EVERY line, including empty lines and comments lines, comments. Do not be lazy!\n"
-   "   - For single-line changes, use the same number for start and end lines.\n"
+   "5. Crucial guidelines for creating the git patch:\n"
    "   - For multi-line changes, ensure the range covers ALL affected lines, from the very first to the very last.\n"
    "   - Double-check that your line numbers align perfectly with the original code structure.\n\n"
-   "5. Final check:\n"
+   "6. Final check:\n"
    "   - Review all suggestions, ensuring each line number is correct, especially the start_line and end_line.\n"
    "   - Confirm that no unrelated code is accidentally modified or deleted.\n"
    "   - Verify that the start_line and end_line correctly include all intended lines for replacement.\n"
@@ -65,46 +65,47 @@ The response they get out excludes the patch
 (defun gpt-copilot-wrapper ()
   (call-interactively #'gpt-copilot))
 
-(defun gpt-copilot-setup ()
+(defun gpt-copilot-setup-windows ()
   "Set up the coding assistant layout with the chat window occupying 1/3 of the screen."
+  ;; TODO variable for the size, variable for 'horizontal or 'vertical
   (interactive)
   (delete-other-windows)
   (let* ((main-buffer (current-buffer))
          (frame-width (frame-width))
-         (main-window-width (floor (* frame-width 0.67))))  ; 2/3 of the screen width
+         (main-window (selected-window))
+         (main-window-width (floor (* frame-width 0.67))))
     (setq gpt-copilot-chat-buffer
           (gptel "*gptel-Copilot*"))
 
     ;; TODO apply the minor mode
-    ;; Split the window and set its width to 2/3 of the frame
-    (let ((main-window (selected-window)))
-      (split-window-right main-window-width)
-      (set-window-buffer main-window main-buffer))
-    ;; Select the chat window (right side) and set its buffer
+    (split-window-right main-window-width)
+    (set-window-buffer main-window main-buffer)
     (other-window 1)
     (set-window-buffer (selected-window) gpt-copilot-chat-buffer)))
 
 (defun gptel-copilot-query (user-query)
   "Send a query to the GPTel Copilot from the current code buffer."
-  (interactive "sEnter your query: ")
+  (interactive "sUser Query: ")
   (unless (buffer-live-p gpt-copilot-chat-buffer)
-    (error "GPTel Copilot chat is not set up. Run gptel-copilot-setup first"))
+    (gptel-copilot-setup-windows))
+  ;; TODO let it be the other buffer if we're in the chat buffer currently
   (let* ((code-buffer (current-buffer))
-         (code-content (if (use-region-p)
-                           (buffer-substring-no-properties (region-beginning) (region-end))
-                         (buffer-substring-no-properties (point-min) (point-max))))
+         (selected-code (if (use-region-p)
+                            (buffer-substring-no-properties (region-beginning) (region-end))
+                          (buffer-substring-no-properties (point-min) (point-max))))
          (file-type (symbol-name major-mode))
          (full-query (format "%s\n\nFile type: %s\n\nCode:\n%s\n\n%s"
                              gpt-base-prompt
                              file-type
-                             code-content
+                             selected-code
                              user-query)))
     (with-current-buffer gpt-copilot-chat-buffer
       (goto-char (point-max))
-      (insert user-query "\n\nAssistant: ")
+      (insert user-query "\n")
       (gptel-request
           full-query
         :callback #'gptel-copilot-handle-response
+        ;; TODO Does this mean that we're sending the whole buffer every time?
         :buffer code-buffer
         :position (point-marker)))))
 
@@ -122,7 +123,7 @@ The response they get out excludes the patch
       ;; Apply patch to code buffer
       (when patch
         (with-current-buffer code-buffer
-          (gpt-copilot-apply-patch patch)))
+          (gpt-copilot-apply-patch patch code-buffer)))
 
       ;; Insert explanation into chat buffer
       (with-current-buffer chat-buffer
@@ -143,34 +144,10 @@ The response they get out excludes the patch
   (when (string-match "```diff\n\\(\\(?:.\\|\n\\)*?\\)```" response)
     (match-string 1 response)))
 
-(defun gptel-copilot-apply-changes ()
-  "Apply changes suggested by GPTel Copilot to the original buffer, overriding the existing code."
-  (interactive)
-  (let* ((chat-buffer gptel-copilot-chat-buffer)
-         (code-buffer (get-buffer-window-list chat-buffer nil t)))
-    (unless (and chat-buffer (buffer-live-p chat-buffer))
-      (error "GPTel Copilot chat buffer not found"))
-    (unless code-buffer
-      (error "No visible buffer associated with GPTel Copilot chat"))
-    (setq code-buffer (window-buffer (car code-buffer)))
-    (with-current-buffer chat-buffer
-      (goto-char (point-min))
-      (while (re-search-forward "Replace lines: \\([0-9]+\\)-\\([0-9]+\\)\n```[^\n]*\n\\(\\(?:.\\|\n\\)*?\\)```" nil t)
-        (let* ((start-line (string-to-number (match-string 1)))
-               (end-line (string-to-number (match-string 2)))
-               (new-code (match-string 3)))
-          (with-current-buffer code-buffer
-            (save-excursion
-              (goto-char (point-min))
-              (forward-line (1- start-line))
-              (let ((beg (point)))
-                (forward-line (- end-line start-line -1))
-                (delete-region beg (point))
-                (insert new-code)))))))
-    (message "Changes applied directly to the code buffer.")))
-
-(defun gpt-copilot-apply-patch (patch)
+(defun gpt-copilot-apply-patch (patch code-buffer)
   "Apply the git patch to the current buffer using git apply."
+
+  (message patch)
   (let ((process-environment (cons "GIT_DIFF_OPTS=--unified=3" process-environment))
         (default-directory (or (vc-git-root default-directory)
                                default-directory))
