@@ -5,12 +5,27 @@ They send a request. We send the full prompt, but the gpt chat buffer only shows
 The response they get out excludes the patch
 "
 
+;; TODO #1 - figure out contexts with the anthropic API
+"TODO make sure that the entire buffer isn't getting sent each time:
+  - The gptel-request function calls gptel--create-prompt each time
+  - I'll need a way to make sure we only send the minimal amount of
+  - data and save context instead
+  - Look at how gptel-add is implemented - it adds context to the gptel-context--alist,
+    which is then sent over
+
+  - If the API itself can't save context, make sure that I'm setting up the context--alist
+    with my initial prompts - otherwise only the buffer gets sent, which doesn't include that info
+"
 ;; TODO ability to clear the cache and start over
-;; TODO ability to chat with the bot in addition to getting patches
 ;; TODO easily save and reload the AI memory
+;; - aka ability to have a context for different projects
+
 ;; TODO Function to toggle the gptel copilot
-;; TODO ability to just send a region, not the whole buffer
-;; TODO make sure the entire buffer is sent
+  ;; - this will need to check which project you're in - use projectile or project
+
+;; TODO copy contexts of those cursor prompts into an initial context setup
+;; TODO make sure everything is well documented and extensible
+
 (require 'cl-generic)
 
 (defvar gptel-lookup--history nil)
@@ -34,6 +49,7 @@ Must be a number between 0 and 1, exclusive."
 (defvar gpt-copilot-window-orientation 'vertical
   "Orientation of the GPT Copilot chat window. Can be 'vertical or 'horizontal.")
 
+;; TODO delete
 (define-minor-mode gpt-copilot-mode
   "Minor mode for GPT Copilot integration."
   :lighter " GPT-Copilot"
@@ -83,6 +99,7 @@ Must be a number between 0 and 1, exclusive."
    "from the very first to the very last. Double-check every range before finalizing your response, paying special attention\n"
    "to the start_line to ensure it hasn't shifted down. Ensure that your line numbers perfectly match the original code structure without any overall shift."))
 
+;; TODO function to toggle
 (defun gpt-copilot-setup-windows ()
   "Set up the coding assistant layout with the chat window."
   (interactive)
@@ -130,7 +147,6 @@ Must be a number between 0 and 1, exclusive."
       (gptel-request
           full-query
         :callback #'gptel-copilot-handle-response
-        :buffer code-buffer
         :position (point-marker)))))
 
 (defun gptel-copilot-handle-response (response info)
