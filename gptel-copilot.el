@@ -5,7 +5,7 @@ They send a request. We send the full prompt, but the gpt chat buffer only shows
 The response they get out excludes the patch
 "
 
-;; TODO #1 - figure out contexts with the anthropic API
+;; TODO #1 - figure out prompt caching https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
 "TODO make sure that the entire buffer isn't getting sent each time:
   - The gptel-request function calls gptel--create-prompt each time
   - I'll need a way to make sure we only send the minimal amount of
@@ -15,6 +15,12 @@ The response they get out excludes the patch
 
   - If the API itself can't save context, make sure that I'm setting up the context--alist
     with my initial prompts - otherwise only the buffer gets sent, which doesn't include that info
+"
+
+" #2 - figure out how to create the diffs
+  - Either I need a minor mode over gptel and to update the line numbers with each change
+  (would be buggy with merging) - (How did Avante do it??)
+  - Or I can create a git patch and let git handle it
 "
 ;; TODO ability to clear the cache and start over
 ;; TODO easily save and reload the AI memory
