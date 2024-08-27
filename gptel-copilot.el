@@ -7,6 +7,9 @@ The response they get out excludes the patch
 
 ;; TODO #1 - figure out prompt caching https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
 "TODO make sure that the entire buffer isn't getting sent each time:
+TODO maintain a log file that keeps track of exactly what each user is merging. This should
+be the buffer getting sent to the ai
+
   - The gptel-request function calls gptel--create-prompt each time
   - I'll need a way to make sure we only send the minimal amount of
   - data and save context instead
@@ -22,6 +25,10 @@ The response they get out excludes the patch
   (would be buggy with merging) - (How did Avante do it??)
   - Or I can create a git patch and let git handle it
 "
+
+"TODO send the header and the buffer but cached
+  - Find out where the API requests are sent"
+
 ;; TODO ability to clear the cache and start over
 ;; TODO easily save and reload the AI memory
 ;; - aka ability to have a context for different projects
