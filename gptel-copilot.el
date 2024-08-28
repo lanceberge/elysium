@@ -1,44 +1,12 @@
-;; TODO #1 - figure out prompt caching https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
-
-"If we send the entire buffer, cache it. I'll likely need an API call data structure for this.
-  The role header should be cached as well
-
-  Figure out if avante sends the entire buffer or just a region
-"
-
-"TODO consider maintaining a log file that keeps track of exactly what each user is merging. This should
-be the buffer getting sent to the ai
-
-  - Probably create my own gptel-request
-  - The gptel-request function calls gptel--create-prompt each time
-
-  - Figure out the gptel-context-alist
-"
-
-" #2 - figure out how to create the diffs
-  - Either I need a minor mode over gptel and to update the line numbers with each change
-  (would be buggy with merging) - (How did Avante do it??)
-  - Or I can create a git patch and let git handle it
-"
-
-;; TODO ability to clear the cache and start over
-;; TODO when I'm send a region, make sure to send the line numbers too
-;; TODO easily save and reload the AI memory
-;; I'll need some file on disk that saves the context of each project
-;; - aka ability to have a context for different projects
-
-;; TODO Function to toggle the gptel copilot
-  ;; - this will need to check which project you're in - use projectile or project
+;; TODO easily save and reload the AI memory - context for different projects
+;; TODO Function to toggle the window config
 
 ;; TODO copy contexts of those cursor prompts into an initial context setup
-;; TODO make sure everything is well documented and extensible
 
 (require 'cl-generic)
+(require 'gptel)
 
 (defvar gptel-lookup--history nil)
-
-(defvar my-coding-assistant-chat-buffer
-  "Buffer for the coding assistant chat.")
 
 (defcustom gpt-copilot-window-size 0.33
   "Size of the GPT Copilot chat window as a fraction of the frame.
@@ -55,17 +23,6 @@ Must be a number between 0 and 1, exclusive."
 
 (defvar gpt-copilot-window-orientation 'vertical
   "Orientation of the GPT Copilot chat window. Can be 'vertical or 'horizontal.")
-
-;; TODO delete
-(define-minor-mode gpt-copilot-mode
-  "Minor mode for GPT Copilot integration."
-  :lighter " GPT-Copilot"
-  :keymap (let ((map (make-sparse-keymap)))
-            (define-key map (kbd "C-c C-g") #'gptel-copilot-query)
-            map))
-
-(defvar my-coding-assistant-chat-buffer
-  "Buffer for the coding assistant chat.")
 
 (defvar gpt-base-prompt
   (concat
@@ -118,7 +75,7 @@ Must be a number between 0 and 1, exclusive."
                                  (frame-height))
                                (- 1 gpt-copilot-window-size)))))
     (setq gpt-copilot-chat-buffer
-          (gptel "*gptel-Copilot*"))
+          (gptel "*Gptel-Copilot*"))
     (with-current-buffer gpt-copilot-chat-buffer
       (gpt-copilot-mode 1))
     (if (eq gpt-copilot-window-orientation 'vertical)
@@ -131,27 +88,47 @@ Must be a number between 0 and 1, exclusive."
 (defun gptel-copilot-query (user-query)
   "Send a query to the GPTel Copilot from the current buffer."
   (interactive "sUser Query: ")
+  ;; TODO nil at the start
   (unless (buffer-live-p gpt-copilot-chat-buffer)
     (gpt-copilot-setup-windows))
-  ;; TODO need to make code-buffer more robust
   (let* ((code-buffer (if (eq (current-buffer) gpt-copilot-chat-buffer)
                           (window-buffer (next-window))
                         (current-buffer)))
+         (prompt (buffer-substring-no-properties
+                  (region-beginning) (region-end)))
+
+         (start-line (with-current-buffer code-buffer
+                       (if (use-region-p)
+                           (line-number-at-pos (region-beginning))
+                         1)))
+
+         (end-line (with-current-buffer code-buffer
+                     (if (use-region-p)
+                         (line-number-at-pos (region-end))
+                       (line-number-at-pos (point-max)))))
+
+
          (selected-code (with-current-buffer code-buffer
                           (if (use-region-p)
                               (buffer-substring-no-properties (region-beginning) (region-end))
                             (buffer-substring-no-properties (point-min) (point-max)))))
+
          (file-type (with-current-buffer code-buffer
                       (symbol-name major-mode)))
-         (full-query (format "%s\n\nFile type: %s\n\nCode:\n%s\n\n%s"
+
+         (full-query (format "%s\n\nFile type: %s\nLine range: %d-%d\n\nCode:\n%s\n\n%s"
                              gpt-base-prompt
                              file-type
+                             start-line
+                             end-line
                              selected-code
                              user-query)))
+
     (with-current-buffer gpt-copilot-chat-buffer
       (goto-char (point-max))
       (insert user-query "\n")
       (gptel-request
+        :system ; TODO override the message
           full-query
         :callback #'gptel-copilot-handle-response
         :position (point-marker)))))
