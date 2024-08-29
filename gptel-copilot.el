@@ -12,77 +12,105 @@ Must be a number between 0 and 1, exclusive."
   :type 'float
   :group 'gpt-copilot
   :set (lambda (symbol value)
-	 (if (and (numberp value)
-		  (< 0 value 1))
-	     (set-default symbol value)
-	   (user-error "gpt-copilot-window-size must be a number between 0 and 1, exclusive")))
-  :initialize 'custom-initialize-default)
+     (if (and (numberp value)
+          (< 0 value 1))
+             (set-default symbol value)
+       (user-error "gpt-copilot-window-size must be a number between 0 and 1, exclusive"))))
 
+(defcustom gpt-copilot-window-style 'vertical
+  "Specify the orientation. It can be 'horizontal, 'vertical, or nil."
+  :type '(choice (const :tag "Horizontal" horizontal)
+         (const :tag "Vertical" vertical)
+         (const :tag "None" nil)))
 
-(defvar gpt-copilot-window-orientation 'vertical
-  "Orientation of the GPT Copilot chat window. Can be 'vertical or 'horizontal.")
+(defvar gpt-copilot--chat-buffer nil)
+(defvar gpt-copilot--window-configuration nil)
 
-(defvar gpt-copilot-chat-buffer nil)
 (defvar gpt-base-prompt
   (concat
    ;; The prompt is originally from avante.nvim:
    ;; https://github.com/yetone/avante.nvim/blob/main/lua/avante/llm.lua
-   "Your primary task is to suggest code modifications by creating a git patch. Follow these instructions meticulously:\n\n"
-   "1. Carefully analyze the original code, paying close attention to its structure and line numbers. Line numbers start from 1 and include ALL lines, even empty ones.\n\n"
+   "Your primary task is to suggest code modifications with precise line number ranges. Follow these instructions meticulously:\n"
+
+   "1. Carefully analyze the original code, paying close attention to its structure and line numbers. Line numbers start from 1 and include ALL lines, even empty ones.\n"
+
    "2. When suggesting modifications:\n"
-   "   a. Use the language in the question to reply. If there are non-English parts in the question, use the language of those parts.\n"
-   "   b. Explain why the change is necessary or beneficial.\n"
-   "   c. Make absolutely certain that the code you provide is in the format of a git patch\n"
-   "   d. Provide the exact code snippet to be replaced using this format:\n\n"
-   "Git patch:\n"
-   "```diff\n"
+   "a. Use the language in the question to reply. If there are non-English parts in the question, use the language of those parts.\n"
+   "b. Explain why the change is necessary or beneficial.\n"
+   "c. If an image is provided, make sure to use the image in conjunction with the code snippet.\n"
+   "d. Provide the exact code snippet to be replaced using this format:\n"
+
+   "Replace lines: {{start_line}}-{{end_line}}\n"
+   "```{{language}}\n"
    "{{suggested_code}}\n"
-   "```\n\n"
+   "```\n"
 
-   "{{In-depth explanation of each change}}\n"
-   "The git patch should be the first thing in the response, followed by the explanation"
-   "4. Crucial guidelines for suggested code snippets:\n"
-   "   - Only apply the change(s) suggested by the most recent message (before your generation).\n"
-   "   - Do not make any unrelated changes to the code.\n"
-   "   - Do not arbitrarily delete pre-existing comments/empty Lines.\n"
-   "   - Do not omit any needed changes from the requisite messages/code blocks.\n"
-   "   - If there is a clicked code block, bias towards just applying that (and applying other changes implied).\n"
-   "   - Please keep your suggested code changes minimal, and do not include irrelevant lines in the code snippet.\n\n"
-   "5. Crucial guidelines for creating the git patch:\n"
-   "   - For multi-line changes, ensure the range covers ALL affected lines, from the very first to the very last.\n"
-   "   - Double-check that your line numbers align perfectly with the original code structure.\n\n"
-   "6. Final check:\n"
-   "   - Review all suggestions, ensuring each line number is correct, especially the start_line and end_line.\n"
-   "   - Confirm that no unrelated code is accidentally modified or deleted.\n"
-   "   - Verify that the start_line and end_line correctly include all intended lines for replacement.\n"
-   "   - Perform a final alignment check to ensure your line numbers haven't shifted, especially the start_line.\n"
-   "   - Double-check that your line numbers align perfectly with the original code structure.\n"
-   "   - Do not show the full content after these modifications.\n\n"
-   "Remember: Accurate line numbers are CRITICAL. The range start_line to end_line must include ALL lines to be replaced,\n"
-   "from the very first to the very last. Double-check every range before finalizing your response, paying special attention\n"
-   "to the start_line to ensure it hasn't shifted down. Ensure that your line numbers perfectly match the original code structure without any overall shift."))
+   "3. Crucial guidelines for suggested code snippets:\n"
+   "- Only apply the change(s) suggested by the most recent assistant message (before your generation).\n"
+   "- Do not make any unrelated changes to the code.\n"
+   "- Produce a valid full rewrite of the entire original file without skipping any lines. Do not be lazy!\n"
+   "- Do not arbitrarily delete pre-existing comments/empty Lines.\n"
+   "- Do not omit large parts of the original file for no reason.\n"
+   "- Do not omit any needed changes from the requisite messages/code blocks.\n"
+   "- If there is a clicked code block, bias towards just applying that (and applying other changes implied).\n"
+   "- Please keep your suggested code changes minimal, and do not include irrelevant lines in the code snippet.\n"
+   "- Maintain the SAME indentation in the returned code as in the source code\n"
 
-;; TODO function to toggle
+   "4. Crucial guidelines for line numbers:\n"
+   "- The content regarding line numbers MUST strictly follow the format Replace lines: {{start_line}}-{{end_line}}. Do not be lazy!\n"
+   "- The range {{start_line}}-{{end_line}} is INCLUSIVE. Both start_line and end_line are included in the replacement.\n"
+   "- Count EVERY line, including empty lines and comments lines, comments. Do not be lazy!\n"
+   "- For single-line changes, use the same number for start and end lines.\n"
+   "- For multi-line changes, ensure the range covers ALL affected lines, from the very first to the very last.\n"
+   "- Double-check that your line numbers align perfectly with the original code structure.\n"
+
+   "5. Final check:\n"
+   "- Review all suggestions, ensuring each line number is correct, especially the start_line and end_line.\n"
+   "- Confirm that no unrelated code is accidentally modified or deleted.\n"
+   "- Verify that the start_line and end_line correctly include all intended lines for replacement.\n"
+   "- Perform a final alignment check to ensure your line numbers haven't shifted, especially the start_line.\n"
+   "- Double-check that your line numbers align perfectly with the original code structure.\n"
+   "- Do not show the full content after these modifications.\n"
+
+   "Remember: Accurate line numbers are CRITICAL. The range start_line to end_line must include ALL lines to be replaced, from the very first to the very last. Double-check every range before finalizing your response, paying special attention to the start_line to ensure it hasn't shifted down. Ensure that your line numbers perfectly match the original code structure without any overall shift.\n"
+   ))
+
 (defun gpt-copilot-setup-windows ()
   "Set up the coding assistant layout with the chat window."
+  (unless gpt-copilot--chat-buffer
+    (setq gpt-copilot--chat-buffer
+      (gptel "*Gptel-Copilot*")))
+
+  (unless gpt-copilot-window-style
+    (delete-other-windows)
+
+    (let* ((main-buffer (current-buffer))
+       (main-window (selected-window))
+       (split-size (floor (* (if (eq gpt-copilot-window-orientation 'vertical)
+                     (frame-width)
+                   (frame-height))
+                 (- 1 gpt-copilot-window-size)))))
+      (setq gpt-copilot--chat-buffer
+            (gptel "*Gptel-Copilot*"))
+      (with-current-buffer gpt-copilot--chat-buffer)
+      (if (eq gpt-copilot-window-orientation 'vertical)
+      (split-window-right split-size)
+    (split-window-below split-size))
+      (set-window-buffer main-window main-buffer)
+      (other-window 1)
+      (set-window-buffer (selected-window) gpt-copilot--chat-buffer)))
+  (setq gpt-copilot--window-configuration (current-window-configuration)))
+
+
+;; TODO test
+(defun gpt-copilot-toggle-window ()
   (interactive)
-  (delete-other-windows)
-  (let* ((main-buffer (current-buffer))
-	 (main-window (selected-window))
-	 (split-size (floor (* (if (eq gpt-copilot-window-orientation 'vertical)
-				   (frame-width)
-				 (frame-height))
-			       (- 1 gpt-copilot-window-size)))))
-    (setq gpt-copilot-chat-buffer
-	  (gptel "*Gptel-Copilot*"))
-    (with-current-buffer gpt-copilot-chat-buffer
-      (gpt-copilot-mode 1))
-    (if (eq gpt-copilot-window-orientation 'vertical)
-	(split-window-right split-size)
-      (split-window-below split-size))
-    (set-window-buffer main-window main-buffer)
-    (other-window 1)
-    (set-window-buffer (selected-window) gpt-copilot-chat-buffer)))
+  (if (buffer-live-p gpt-copilot--chat-buffer)
+      (if (get-buffer-window gpt-copilot--chat-buffer)
+      (delete-window (get-buffer-window gpt-copilot--chat-buffer))
+    (set-window-configuration gpt-copilot--window-configuration))
+
+    (gpt-copilot-setup-windows)))
 
 
 ;; TODO adapt this to work in the chat buffer
