@@ -6,24 +6,23 @@
 (require 'cl-generic)
 (require 'gptel)
 
-(defvar gptel-lookup--history nil)
-
 (defcustom gpt-copilot-window-size 0.33
   "Size of the GPT Copilot chat window as a fraction of the frame.
 Must be a number between 0 and 1, exclusive."
   :type 'float
   :group 'gpt-copilot
   :set (lambda (symbol value)
-         (if (and (numberp value)
-                  (< 0 value 1))
-             (set-default symbol value)
-           (user-error "gpt-copilot-window-size must be a number between 0 and 1, exclusive")))
+	 (if (and (numberp value)
+		  (< 0 value 1))
+	     (set-default symbol value)
+	   (user-error "gpt-copilot-window-size must be a number between 0 and 1, exclusive")))
   :initialize 'custom-initialize-default)
 
 
 (defvar gpt-copilot-window-orientation 'vertical
   "Orientation of the GPT Copilot chat window. Can be 'vertical or 'horizontal.")
 
+(defvar gpt-copilot-chat-buffer nil)
 (defvar gpt-base-prompt
   (concat
    ;; The prompt is originally from avante.nvim:
@@ -36,7 +35,7 @@ Must be a number between 0 and 1, exclusive."
    "   c. Make absolutely certain that the code you provide is in the format of a git patch\n"
    "   d. Provide the exact code snippet to be replaced using this format:\n\n"
    "Git patch:\n"
-   "```\n"
+   "```diff\n"
    "{{suggested_code}}\n"
    "```\n\n"
 
@@ -69,99 +68,103 @@ Must be a number between 0 and 1, exclusive."
   (interactive)
   (delete-other-windows)
   (let* ((main-buffer (current-buffer))
-         (main-window (selected-window))
-         (split-size (floor (* (if (eq gpt-copilot-window-orientation 'vertical)
-                                   (frame-width)
-                                 (frame-height))
-                               (- 1 gpt-copilot-window-size)))))
+	 (main-window (selected-window))
+	 (split-size (floor (* (if (eq gpt-copilot-window-orientation 'vertical)
+				   (frame-width)
+				 (frame-height))
+			       (- 1 gpt-copilot-window-size)))))
     (setq gpt-copilot-chat-buffer
-          (gptel "*Gptel-Copilot*"))
+	  (gptel "*Gptel-Copilot*"))
     (with-current-buffer gpt-copilot-chat-buffer
       (gpt-copilot-mode 1))
     (if (eq gpt-copilot-window-orientation 'vertical)
-        (split-window-right split-size)
+	(split-window-right split-size)
       (split-window-below split-size))
     (set-window-buffer main-window main-buffer)
     (other-window 1)
     (set-window-buffer (selected-window) gpt-copilot-chat-buffer)))
 
+
+;; TODO adapt this to work in the chat buffer
 (defun gptel-copilot-query (user-query)
   "Send a query to the GPTel Copilot from the current buffer."
   (interactive "sUser Query: ")
   ;; TODO nil at the start
-  (unless (buffer-live-p gpt-copilot-chat-buffer)
+  (unless gpt-copilot-chat-buffer
     (gpt-copilot-setup-windows))
+
+  ;;  TODO fix this to work with multiple code buffers
   (let* ((code-buffer (if (eq (current-buffer) gpt-copilot-chat-buffer)
-                          (window-buffer (next-window))
-                        (current-buffer)))
-         (prompt (buffer-substring-no-properties
-                  (region-beginning) (region-end)))
+			  (window-buffer (next-window))
+			(current-buffer)))
+	 (prompt (buffer-substring-no-properties
+		  (region-beginning) (region-end)))
 
-         (start-line (with-current-buffer code-buffer
-                       (if (use-region-p)
-                           (line-number-at-pos (region-beginning))
-                         1)))
+	 (start-line (with-current-buffer code-buffer
+		       (if (use-region-p)
+			   (line-number-at-pos (region-beginning))
+			 1)))
 
-         (end-line (with-current-buffer code-buffer
-                     (if (use-region-p)
-                         (line-number-at-pos (region-end))
-                       (line-number-at-pos (point-max)))))
+	 (end-line (with-current-buffer code-buffer
+		     (if (use-region-p)
+			 (line-number-at-pos (region-end))
+		       (line-number-at-pos (point-max)))))
 
 
-         (selected-code (with-current-buffer code-buffer
-                          (if (use-region-p)
-                              (buffer-substring-no-properties (region-beginning) (region-end))
-                            (buffer-substring-no-properties (point-min) (point-max)))))
+	 (selected-code (with-current-buffer code-buffer
+			  (if (use-region-p)
+			      (buffer-substring-no-properties (region-beginning) (region-end))
+			    (buffer-substring-no-properties (point-min) (point-max)))))
 
-         (file-type (with-current-buffer code-buffer
-                      (symbol-name major-mode)))
+	 (file-type (with-current-buffer code-buffer
+		      (symbol-name major-mode)))
 
-         (full-query (format "%s\n\nFile type: %s\nLine range: %d-%d\n\nCode:\n%s\n\n%s"
-                             gpt-base-prompt
-                             file-type
-                             start-line
-                             end-line
-                             selected-code
-                             user-query)))
+	 (full-query (format "%s\n\nFile type: %s\nLine range: %d-%d\n\nCode:\n%s\n\n%s"
+			     gpt-base-prompt
+			     file-type
+			     start-line
+			     end-line
+			     selected-code
+			     user-query)))
 
     (with-current-buffer gpt-copilot-chat-buffer
       (goto-char (point-max))
       (insert user-query "\n")
       (gptel-request
-        :system ; TODO override the message
-          full-query
-        :callback #'gptel-copilot-handle-response
-        :position (point-marker)))))
+	  :system full-query
+	  :callback #'gptel-copilot-handle-response
+	  :position (point-marker)))))
+
 
 (defun gptel-copilot-handle-response (response info)
   "Handle the response from the GPTel Copilot."
   (when response
     (let* ((code-buffer (plist-get info :buffer))
-           (chat-buffer gpt-copilot-chat-buffer)
-           (split-index (string-match "```\n\\'" response))
-           (patch (when split-index
-                    (substring response 0 (match-beginning 0))))
-           (explanation (if split-index
-                            (substring response (match-end 0))
-                          response)))
+	   (chat-buffer gpt-copilot-chat-buffer)
+	   (split-index (string-match "```\n\\'" response))
+	   (patch (when split-index
+		    (substring response 0 (match-beginning 0))))
+	   (explanation (if split-index
+			    (substring response (match-end 0))
+			  response)))
       ;; Apply patch to code buffer
       (when patch
-        (with-current-buffer code-buffer
-          (gpt-copilot-apply-patch patch code-buffer)))
+	(with-current-buffer code-buffer
+	  (gpt-copilot-apply-patch patch code-buffer)))
 
       ;; Insert explanation into chat buffer
       (with-current-buffer chat-buffer
-        (let ((explanation-info (list :buffer chat-buffer
-                                      :position (point-max-marker)
-                                      :in-place t)))
-          (gptel--insert-response (string-trim explanation) explanation-info))
+	(let ((explanation-info (list :buffer chat-buffer
+				      :position (point-max-marker)
+				      :in-place t)))
+	  (gptel--insert-response (string-trim explanation) explanation-info))
 
-        ;; Add a message in the chat buffer indicating that a patch was applied
-        (when patch
-          (let ((patch-message-info (list :buffer chat-buffer
-                                          :position (point-max-marker)
-                                          :in-place t)))
-            (gptel--insert-response "A patch has been applied to the code buffer." patch-message-info)))))))
+	;; Add a message in the chat buffer indicating that a patch was applied
+	(when patch
+	  (let ((patch-message-info (list :buffer chat-buffer
+					  :position (point-max-marker)
+					  :in-place t)))
+	    (gptel--insert-response "A patch has been applied to the code buffer." patch-message-info)))))))
 
 (defun gpt-copilot-extract-patch (response)
   "Extract the git patch from the GPT response."
@@ -170,25 +173,24 @@ Must be a number between 0 and 1, exclusive."
 
 (defun gpt-copilot-apply-patch (patch code-buffer)
   "Apply the git patch to the current buffer using git apply."
-  (message patch)
   (let ((process-environment (cons "GIT_DIFF_OPTS=--unified=3" process-environment))
-        (default-directory (or (vc-git-root default-directory)
-                               default-directory))
-        (coding-system-for-write 'utf-8)
-        (coding-system-for-read 'utf-8)
-        (process-connection-type nil))
+	(default-directory (or (vc-git-root default-directory)
+			       default-directory))
+	(coding-system-for-write 'utf-8)
+	(coding-system-for-read 'utf-8)
+	(process-connection-type nil))
     (with-temp-buffer
       (insert patch)
       (let ((exit-code
-             (call-process-region (point-min) (point-max)
-                                  "git" nil t nil
-                                  "apply" "--ignore-whitespace" "--unidiff-zero" "-")))
-        (if (zerop exit-code)
-            (progn
-              (message "Patch applied successfully")
-              (with-current-buffer (current-buffer)
-                (revert-buffer t t t)))
-          (message "Failed to apply patch: %s"
-                   (buffer-substring-no-properties (point-min) (point-max))))))))
+	     (call-process-region (point-min) (point-max)
+				  "git" nil t nil
+				  "apply" "--ignore-whitespace" "--unidiff-zero" "-")))
+	(if (zerop exit-code)
+	    (progn
+	      (message "Patch applied successfully")
+	      (with-current-buffer (current-buffer)
+		(revert-buffer t t t)))
+	  (message "Failed to apply patch: %s"
+		   (buffer-substring-no-properties (point-min) (point-max))))))))
 
 (provide 'gptel-copilot)
