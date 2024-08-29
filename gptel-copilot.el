@@ -1,6 +1,4 @@
 ;; TODO easily save and reload the AI memory - context for different projects
-;; TODO Function to toggle the window config
-
 ;; TODO copy contexts of those cursor prompts into an initial context setup
 
 (require 'cl-generic)
@@ -108,16 +106,15 @@ Must be a number between 0 and 1, exclusive."
       (set-window-buffer (selected-window) gpt-copilot--chat-buffer))))
 
 
-;; TODO adapt this to work in the chat buffer
+;; TODO test in the chat buffer
 (defun gptel-copilot-query (user-query)
   "Send a query to the GPTel Copilot from the current buffer."
   (interactive "sUser Query: ")
   ;; TODO nil at the start
-  (unless gpt-copilot-chat-buffer
+  (unless (buffer-live-p gpt-copilot--chat-buffer)
     (gpt-copilot-setup-windows))
 
-  ;;  TODO fix this to work with multiple code buffers
-  (let* ((code-buffer (if (eq (current-buffer) gpt-copilot-chat-buffer)
+  (let* ((code-buffer (if (eq (current-buffer) gpt-copilot--chat-buffer)
 			  (window-buffer (next-window))
 			(current-buffer)))
 	 (prompt (buffer-substring-no-properties
@@ -142,8 +139,7 @@ Must be a number between 0 and 1, exclusive."
 	 (file-type (with-current-buffer code-buffer
 		      (symbol-name major-mode)))
 
-	 (full-query (format "%s\n\nFile type: %s\nLine range: %d-%d\n\nCode:\n%s\n\n%s"
-			     gpt-base-prompt
+	 (full-query (format "\n\nFile type: %s\nLine range: %d-%d\n\nCode:\n%s\n\n%s"
 			     file-type
 			     start-line
 			     end-line
@@ -153,67 +149,106 @@ Must be a number between 0 and 1, exclusive."
     (with-current-buffer gpt-copilot--chat-buffer
       (goto-char (point-max))
       (insert user-query "\n")
-      (gptel-request
-	  :system full-query
-	  :callback #'gptel-copilot-handle-response
-	  :position (point-marker)))))
+      (gptel-request full-query
+	:system gpt-base-prompt
+	:buffer gpt-copilot-chat-buffer
+	:callback #'gptel-copilot-handle-response
+	:position (point-marker)))))
 
 
 (defun gptel-copilot-handle-response (response info)
-  "Handle the response from the GPTel Copilot."
+  "Handle the response from the GPTel Copilot, applying changes in git merge format."
   (when response
-    (let* ((code-buffer (plist-get info :buffer))
-	   (chat-buffer gpt-copilot-chat-buffer)
-	   (split-index (string-match "```\n\\'" response))
-	   (patch (when split-index
-		    (substring response 0 (match-beginning 0))))
-	   (explanation (if split-index
-			    (substring response (match-end 0))
-			  response)))
-      ;; Apply patch to code buffer
-      (when patch
-	(with-current-buffer code-buffer
-	  (gpt-copilot-apply-patch patch code-buffer)))
+    (let* ((code-buffer (if (eq (current-buffer) gpt-copilot--chat-buffer)
+			    (window-buffer (next-window))
+			  (current-buffer)))
+	   (extracted-data (gptel-copilot-extract-changes response))
+	   (changes (plist-get extracted-data :changes))
+	   (explanations (plist-get extracted-data :explanations)))
 
-      ;; Insert explanation into chat buffer
-      (with-current-buffer chat-buffer
-	(let ((explanation-info (list :buffer chat-buffer
-				      :position (point-max-marker)
-				      :in-place t)))
-	  (gptel--insert-response (string-trim explanation) explanation-info))
+      ;; Apply changes to code buffer in git merge format
+      (when changes
+	(gptel-copilot-apply-changes code-buffer changes))
 
-	;; Add a message in the chat buffer indicating that a patch was applied
-	(when patch
-	  (let ((patch-message-info (list :buffer chat-buffer
+      ;; Insert explanations into chat buffer
+      (with-current-buffer gpt-copilot--chat-buffer
+	(dolist (explanation explanations)
+	  (let ((explanation-info (list :buffer gpt-copilot--chat-buffer
+					:position (point-max-marker)
+					:in-place t)))
+	    (gptel--insert-response (string-trim explanation) explanation-info)))
+
+	;; Add a message in the chat buffer indicating that changes were applied
+	(when changes
+	  (let ((patch-message-info (list :buffer gpt-copilot--chat-buffer
 					  :position (point-max-marker)
 					  :in-place t)))
-	    (gptel--insert-response "A patch has been applied to the code buffer." patch-message-info)))))))
+	    (gptel--sanitize-model)
+	    (gptel--insert-response
+	     (format "%d change(s) have been applied to the code buffer in git merge format." (length changes))
+	     patch-message-info)
+	    (gptel--update-status " Waiting..." 'warning)))))))
 
-(defun gpt-copilot-extract-patch (response)
-  "Extract the git patch from the GPT response."
-  (when (string-match "```diff\n\\(\\(?:.\\|\n\\)*?\\)```" response)
-    (match-string 1 response)))
 
-(defun gpt-copilot-apply-patch (patch code-buffer)
-  "Apply the git patch to the current buffer using git apply."
-  (let ((process-environment (cons "GIT_DIFF_OPTS=--unified=3" process-environment))
-	(default-directory (or (vc-git-root default-directory)
-			       default-directory))
-	(coding-system-for-write 'utf-8)
-	(coding-system-for-read 'utf-8)
-	(process-connection-type nil))
-    (with-temp-buffer
-      (insert patch)
-      (let ((exit-code
-	     (call-process-region (point-min) (point-max)
-				  "git" nil t nil
-				  "apply" "--ignore-whitespace" "--unidiff-zero" "-")))
-	(if (zerop exit-code)
-	    (progn
-	      (message "Patch applied successfully")
-	      (with-current-buffer (current-buffer)
-		(revert-buffer t t t)))
-	  (message "Failed to apply patch: %s"
-		   (buffer-substring-no-properties (point-min) (point-max))))))))
+(defun gptel-copilot-extract-changes (response)
+  "Extract changes and explanations from the RESPONSE string."
+  (let ((changes '())
+	(explanations '())
+	(start 0)
+	(change-regex "\\(?:^\\|\n\n\\)\\(Lines \\([0-9]+\\)-\\([0-9]+\\):\n\n\\(?:.\\|\n\\)*?\\)\nReplace lines: \\([0-9]+\\)-\\([0-9]+\\)\n```\n\\(\\(?:.\\|\n\\)*?\\)```"))
+    (while (string-match change-regex response start)
+      (let ((explanation (match-string 1 response))
+	    (change-start (string-to-number (match-string 4 response)))
+	    (change-end (string-to-number (match-string 5 response)))
+	    (code (match-string 6 response)))
+	(setq explanations (append explanations (list explanation))
+	      changes (append changes
+			      (list (list :start change-start
+					  :end change-end
+					  :code code))))
+	(setq start (match-end 0))))
+
+    ;; Check for any remaining explanation after the last change
+
+    ;; TODO use add-to-list
+    (when (string-match "\n\n\\(.*\\)\\'" response start)
+      (setq explanations (append explanations (list (match-string 1 response)))))
+
+    ;; Return plist with explanations and changes
+    (list :explanations explanations
+	  :changes changes)))
+
+
+(defun gptel-copilot-apply-changes (buffer changes)
+  "Apply CHANGES to BUFFER in git merge format."
+  (with-current-buffer buffer
+    (save-excursion
+      (let ((line-offset 0))
+	(dolist (change changes)
+	  (let* ((start (+ (plist-get change :start) line-offset))
+		 (end (+ (plist-get change :end) line-offset))
+		 (new-code (plist-get change :code))
+		 (old-lines (- end start -1))
+		 (new-lines (length (split-string new-code "\n")))
+		 (merge-line-count 3)) ; >>>>> and <<<<< and =====
+	    ;; Go to the start line
+	    (goto-char (point-min))
+	    (forward-line (1- start))
+	    ;; Insert the git merge format
+	    (insert ">>>>>>>\n")
+	    (insert new-code)
+	    (unless (string-suffix-p "\n" new-code)
+	      (insert "\n"))
+	    (insert "=======\n")
+	    ;; Move the original content
+	    (let ((beg (point)))
+	      (forward-line old-lines)
+	      (let ((old-content (buffer-substring beg (point))))
+		(delete-region beg (point))
+		(insert old-content)))
+	    (insert "<<<<<<<\n")
+	    ;; Update line offset
+	    (setq line-offset (+ line-offset (- new-lines old-lines) merge-line-count))))))))
+
 
 (provide 'gptel-copilot)
