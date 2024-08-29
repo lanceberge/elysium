@@ -12,19 +12,18 @@ Must be a number between 0 and 1, exclusive."
   :type 'float
   :group 'gpt-copilot
   :set (lambda (symbol value)
-     (if (and (numberp value)
-          (< 0 value 1))
-             (set-default symbol value)
-       (user-error "gpt-copilot-window-size must be a number between 0 and 1, exclusive"))))
+	 (if (and (numberp value)
+		  (< 0 value 1))
+	     (set-default symbol value)
+	   (user-error "gpt-copilot-window-size must be a number between 0 and 1, exclusive"))))
 
 (defcustom gpt-copilot-window-style 'vertical
   "Specify the orientation. It can be 'horizontal, 'vertical, or nil."
   :type '(choice (const :tag "Horizontal" horizontal)
-         (const :tag "Vertical" vertical)
-         (const :tag "None" nil)))
+		 (const :tag "Vertical" vertical)
+		 (const :tag "None" nil)))
 
 (defvar gpt-copilot--chat-buffer nil)
-(defvar gpt-copilot--window-configuration nil)
 
 (defvar gpt-base-prompt
   (concat
@@ -75,42 +74,38 @@ Must be a number between 0 and 1, exclusive."
    "Remember: Accurate line numbers are CRITICAL. The range start_line to end_line must include ALL lines to be replaced, from the very first to the very last. Double-check every range before finalizing your response, paying special attention to the start_line to ensure it hasn't shifted down. Ensure that your line numbers perfectly match the original code structure without any overall shift.\n"
    ))
 
+
+(defun gpt-copilot-toggle-window ()
+  (interactive)
+  (if (and (buffer-live-p gpt-copilot--chat-buffer)
+	   (get-buffer-window gpt-copilot--chat-buffer))
+      (delete-window (get-buffer-window gpt-copilot--chat-buffer))
+
+    (gpt-copilot-setup-windows)))
+
+
 (defun gpt-copilot-setup-windows ()
   "Set up the coding assistant layout with the chat window."
   (unless gpt-copilot--chat-buffer
     (setq gpt-copilot--chat-buffer
-      (gptel "*Gptel-Copilot*")))
+	  (gptel "*Gptel-Copilot*")))
 
   (unless gpt-copilot-window-style
     (delete-other-windows)
 
     (let* ((main-buffer (current-buffer))
-       (main-window (selected-window))
-       (split-size (floor (* (if (eq gpt-copilot-window-orientation 'vertical)
-                     (frame-width)
-                   (frame-height))
-                 (- 1 gpt-copilot-window-size)))))
-      (setq gpt-copilot--chat-buffer
-            (gptel "*Gptel-Copilot*"))
+	   (main-window (selected-window))
+	   (split-size (floor (* (if (eq gpt-copilot-window-orientation 'vertical)
+				     (frame-width)
+				   (frame-height))
+				 (- 1 gpt-copilot-window-size)))))
       (with-current-buffer gpt-copilot--chat-buffer)
       (if (eq gpt-copilot-window-orientation 'vertical)
-      (split-window-right split-size)
-    (split-window-below split-size))
+	  (split-window-right split-size)
+	(split-window-below split-size))
       (set-window-buffer main-window main-buffer)
       (other-window 1)
-      (set-window-buffer (selected-window) gpt-copilot--chat-buffer)))
-  (setq gpt-copilot--window-configuration (current-window-configuration)))
-
-
-;; TODO test
-(defun gpt-copilot-toggle-window ()
-  (interactive)
-  (if (buffer-live-p gpt-copilot--chat-buffer)
-      (if (get-buffer-window gpt-copilot--chat-buffer)
-      (delete-window (get-buffer-window gpt-copilot--chat-buffer))
-    (set-window-configuration gpt-copilot--window-configuration))
-
-    (gpt-copilot-setup-windows)))
+      (set-window-buffer (selected-window) gpt-copilot--chat-buffer))))
 
 
 ;; TODO adapt this to work in the chat buffer
@@ -155,7 +150,7 @@ Must be a number between 0 and 1, exclusive."
 			     selected-code
 			     user-query)))
 
-    (with-current-buffer gpt-copilot-chat-buffer
+    (with-current-buffer gpt-copilot--chat-buffer
       (goto-char (point-max))
       (insert user-query "\n")
       (gptel-request
