@@ -82,23 +82,24 @@ Must be a number between 0 and 1, exclusive."
     (gpt-copilot-setup-windows)))
 
 
+;; TODO nil doesn't work because of the gptel-command
 (defun gpt-copilot-setup-windows ()
   "Set up the coding assistant layout with the chat window."
-  (unless gpt-copilot--chat-buffer
+  (unless (buffer-live-p gpt-copilot--chat-buffer)
     (setq gpt-copilot--chat-buffer
 	  (gptel "*Gptel-Copilot*")))
 
-  (unless gpt-copilot-window-style
+  (when gpt-copilot-window-style
     (delete-other-windows)
 
     (let* ((main-buffer (current-buffer))
 	   (main-window (selected-window))
-	   (split-size (floor (* (if (eq gpt-copilot-window-orientation 'vertical)
+	   (split-size (floor (* (if (eq gpt-copilot-window-style 'vertical)
 				     (frame-width)
 				   (frame-height))
 				 (- 1 gpt-copilot-window-size)))))
       (with-current-buffer gpt-copilot--chat-buffer)
-      (if (eq gpt-copilot-window-orientation 'vertical)
+      (if (eq gpt-copilot-window-style 'vertical)
 	  (split-window-right split-size)
 	(split-window-below split-size))
       (set-window-buffer main-window main-buffer)
@@ -130,7 +131,6 @@ Must be a number between 0 and 1, exclusive."
 			 (line-number-at-pos (region-end))
 		       (line-number-at-pos (point-max)))))
 
-
 	 (selected-code (with-current-buffer code-buffer
 			  (if (use-region-p)
 			      (buffer-substring-no-properties (region-beginning) (region-end))
@@ -149,13 +149,14 @@ Must be a number between 0 and 1, exclusive."
     (with-current-buffer gpt-copilot--chat-buffer
       (goto-char (point-max))
       (insert user-query "\n")
-      (gptel-request full-query
+      (gptel-request
+	  full-query
 	:system gpt-base-prompt
-	:buffer gpt-copilot-chat-buffer
-	:callback #'gptel-copilot-handle-response
-	:position (point-marker)))))
+	:buffer gpt-copilot--chat-buffer
+	:callback #'gptel-copilot-handle-response))))
 
 
+;; TODO find out if it shows the first explanation
 (defun gptel-copilot-handle-response (response info)
   "Handle the response from the GPTel Copilot, applying changes in git merge format."
   (when response
