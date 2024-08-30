@@ -124,7 +124,7 @@ Must be a number between 0 and 1, exclusive."
   (interactive
    (list
     (if (eq (current-buffer) gpt-copilot--chat-buffer)
-	nil  ; We'll extract the query from the chat buffer
+	nil		; We'll extract the query from the chat buffer
       (read-string "User Query: "))))
   (unless (buffer-live-p gpt-copilot--chat-buffer)
     (gpt-copilot-setup-windows))
@@ -169,7 +169,8 @@ Must be a number between 0 and 1, exclusive."
 	  full-query
 	:system gpt-base-prompt
 	:buffer chat-buffer
-	:callback #'gptel-copilot-handle-response))))
+	:callback #'gptel-copilot-handle-response)))
+  (gptel--update-status " Ready" 'success))
 
 
 ;; TODO find out if it shows the first explanation
@@ -197,7 +198,6 @@ Must be a number between 0 and 1, exclusive."
 
 	;; Add a message in the chat buffer indicating that changes were applied
 	(gptel--sanitize-model)
-	(gptel--update-status " Ready" 'success)
 	))))
 
 
@@ -272,7 +272,9 @@ will offset the LLM line numbers by 3"
 		 (new-code (plist-get change :code))
 		 (old-lines (- end start -1))
 		 (new-lines (length (split-string new-code "\n")))
-		 (merge-line-count 3))  ; Offsets from the three merge strings
+		 (merge-line-count 3)) ; Offsets from the three merge strings
+
+	    ;; TODO why is lowercase getting inserted into the undo history??
 	    (goto-char (point-min))
 	    (forward-line (1- start))
 	    (insert "<<<<<<< HEAD\n")
@@ -289,6 +291,7 @@ will offset the LLM line numbers by 3"
 	    (setq line-offset (+ line-offset (- new-lines old-lines) merge-line-count))))))))
 
 
+;; TODO this could probably be replaced with something already in gptel
 (defun gptel-copilot-parse-user-query (buffer)
   "Parse and extract the most recent user query from the buffer.
 The query is expected to be after the last '* ' (org-mode) or '### ' (markdown-mode) heading.
