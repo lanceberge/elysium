@@ -5,6 +5,11 @@
 (require 'cl-generic)
 (require 'gptel)
 
+
+(defgroup gpt-copilot nil
+  "Apply code changes using gptel"
+  :group 'hypermedia)
+
 (defcustom gpt-copilot-window-size 0.33
   "Size of the GPT Copilot chat window as a fraction of the frame.
 Must be a number between 0 and 1, exclusive."
@@ -17,7 +22,7 @@ Must be a number between 0 and 1, exclusive."
 	   (user-error "gpt-copilot-window-size must be a number between 0 and 1, exclusive"))))
 
 (defcustom gpt-copilot-window-style 'vertical
-  "Specify the orientation. It can be 'horizontal, 'vertical, or nil."
+  "Specify the orientation. It can be \='horizontal, '\=vertical, or nil."
   :type '(choice (const :tag "Horizontal" horizontal)
 		 (const :tag "Vertical" vertical)
 		 (const :tag "None" nil)))
@@ -28,8 +33,6 @@ Must be a number between 0 and 1, exclusive."
   (concat
    ;; The prompt is originally from avante.nvim:
    ;; https://github.com/yetone/avante.nvim/blob/main/lua/avante/llm.lua
-   ;; TODO explain each code change with numbers preceding
-   ;; TODO make sure the explanations go after the code changes
    "Your primary task is to suggest code modifications with precise line number ranges. Follow these instructions meticulously:\n"
 
    "1. Carefully analyze the original code, paying close attention to its structure and line numbers. Line numbers start from 1 and include ALL lines, even empty ones.\n"
@@ -46,6 +49,7 @@ Must be a number between 0 and 1, exclusive."
    "```{{language}}\n"
    "{{suggested_code}}\n"
    "```\n"
+   "{{Explanation of the changes}}"
 
    "3. Crucial guidelines for suggested code snippets:\n"
    "- Only apply the change(s) suggested by the most recent assistant message (before your generation).\n"
@@ -114,6 +118,8 @@ Must be a number between 0 and 1, exclusive."
 
 
 ;; TODO test in the chat buffer
+;; TODO instead of adding user-query to the full-query, it should be added to the
+;; Chat buffer which is then sent to the request
 (defun gptel-copilot-query (user-query)
   "Send a query to the GPTel Copilot from the current buffer."
   (interactive "sUser Query: ")
@@ -165,7 +171,6 @@ Must be a number between 0 and 1, exclusive."
 ;; TODO find out if it shows the first explanation
 (defun gptel-copilot-handle-response (response info)
   "Handle the response from the GPTel Copilot, applying changes in git merge format."
-  (pp response)
   (when response
     (let* ((code-buffer (if (eq (current-buffer) gpt-copilot--chat-buffer)
 			    (window-buffer (next-window))
@@ -209,7 +214,8 @@ Must be a number between 0 and 1, exclusive."
 	(explanations '())
 	(start 0)
 	(change-count 0)
-	(code-block-regex "Replace lines: \\([0-9]+\\)-\\([0-9]+\\)\n```\\(?:[[:alpha:]-]+\\)?\n\\(\\(?:.\\|\n\\)*?\\)```"))
+	(code-block-regex
+	 "Replace lines: \\([0-9]+\\)-\\([0-9]+\\)\n```\\(?:[[:alpha:]-]+\\)?\n\\(\\(?:.\\|\n\\)*?\\)```"))
     (while (string-match code-block-regex response start)
       (let ((change-start (string-to-number (match-string 1 response)))
 	    (change-end (string-to-number (match-string 2 response)))
@@ -243,6 +249,7 @@ Must be a number between 0 and 1, exclusive."
 	  :changes (nreverse changes))))
 
 
+;; TODO unit test
 (defun gptel-copilot-apply-changes (buffer changes)
   "Apply changes to buffer in a git merge format.
 We need to keep track of an offset of line numbers. For example, if we
