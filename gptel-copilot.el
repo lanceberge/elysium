@@ -215,35 +215,32 @@ Must be a number between 0 and 1, exclusive."
 	    (change-end (string-to-number (match-string 2 response)))
 	    (code (match-string 3 response))
 	    (explanation-text (substring response start (match-beginning 0))))
-	;; Add explanation
+
+	;; TODO make this different for the initial explanation
 	(when (not (string-empty-p explanation-text))
 	  (setq change-count (1+ change-count))
-	  (setq explanations
-		(append explanations
-			(list (format "%s Code Change:\n%s\n\n"
-				      (gptel-copilot--ordinal change-count)
-				      (explanation-text))))))
-	;; Add change
-	(setq changes
-	      (append changes
-		      (list (list :start change-start
-				  :end change-end
-				  :code code))))
+	  (push (format "%s Code Change:\n%s\n\n"
+			(gptel-copilot--ordinal change-count)
+			explanation-text)
+		explanations))
 
-	;; index in the response string
+	(push (list :start change-start
+		    :end change-end
+		    :code code)
+	      changes)
+
+	;; Update start index in the response string
 	(setq start (match-end 0))))
 
     ;; Add any remaining text as the last explanation
     (let ((remaining-text (substring response start)))
       (when (not (string-empty-p remaining-text))
 	(setq change-count (1+ change-count))
-	(setq explanations
-	      (append explanations
-		      (list (concat (format "%s change:\n" (gptel-copilot--ordinal change-count))
-				    remaining-text))))))
-    ;; Return plist with explanations and changes
-    (list :explanations explanations
-	  :changes changes)))
+	(push (concat (format "%s change:\n" (gptel-copilot--ordinal change-count))
+		      remaining-text)
+	      explanations)))
+    (list :explanations (nreverse explanations)
+	  :changes (nreverse changes))))
 
 
 (defun gptel-copilot-apply-changes (buffer changes)
