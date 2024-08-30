@@ -1,5 +1,6 @@
 ;; TODO easily save and reload the AI memory - context for different projects
 ;; TODO copy contexts of those cursor prompts into an initial context setup
+;; TODO test with org
 
 (require 'cl-generic)
 (require 'gptel)
@@ -27,6 +28,8 @@ Must be a number between 0 and 1, exclusive."
   (concat
    ;; The prompt is originally from avante.nvim:
    ;; https://github.com/yetone/avante.nvim/blob/main/lua/avante/llm.lua
+   ;; TODO explain each code change with numbers preceding
+   ;; TODO make sure the explanations go after the code changes
    "Your primary task is to suggest code modifications with precise line number ranges. Follow these instructions meticulously:\n"
 
    "1. Carefully analyze the original code, paying close attention to its structure and line numbers. Line numbers start from 1 and include ALL lines, even empty ones.\n"
@@ -38,6 +41,8 @@ Must be a number between 0 and 1, exclusive."
    "d. Provide the exact code snippet to be replaced using this format:\n"
 
    "Replace lines: {{start_line}}-{{end_line}}\n"
+   ;; We don't need the language here but if we don't specify it then some LLMs might provide it and some might not.
+   ;; So it's better to mandate it and filter it later
    "```{{language}}\n"
    "{{suggested_code}}\n"
    "```\n"
@@ -83,6 +88,7 @@ Must be a number between 0 and 1, exclusive."
 
 
 ;; TODO nil doesn't work because of the gptel-command
+;; nil should have the var open in the background
 (defun gpt-copilot-setup-windows ()
   "Set up the coding assistant layout with the chat window."
   (unless (buffer-live-p gpt-copilot--chat-buffer)
@@ -159,6 +165,7 @@ Must be a number between 0 and 1, exclusive."
 ;; TODO find out if it shows the first explanation
 (defun gptel-copilot-handle-response (response info)
   "Handle the response from the GPTel Copilot, applying changes in git merge format."
+  (pp response)
   (when response
     (let* ((code-buffer (if (eq (current-buffer) gpt-copilot--chat-buffer)
 			    (window-buffer (next-window))
@@ -180,41 +187,59 @@ Must be a number between 0 and 1, exclusive."
 	    (gptel--insert-response (string-trim explanation) explanation-info)))
 
 	;; Add a message in the chat buffer indicating that changes were applied
-	(when changes
-	  (let ((patch-message-info (list :buffer gpt-copilot--chat-buffer
-					  :position (point-max-marker)
-					  :in-place t)))
-	    (gptel--sanitize-model)
-	    (gptel--insert-response
-	     (format "%d change(s) have been applied to the code buffer in git merge format." (length changes))
-	     patch-message-info)
-	    (gptel--update-status " Waiting..." 'warning)))))))
+	(gptel--sanitize-model)
+	;; (gptel--insert-response
+	;;  (format "%d change(s) have been applied to the code buffer in git merge format." (length changes))
+	;;  patch-message-info)
+	(gptel--update-status " Waiting..." 'warning)))))
 
 
 (defun gptel-copilot-extract-changes (response)
-  "Extract changes and explanations from the RESPONSE string."
+  "Extract code changes from the ``` blocks, and explanations. Explanations will be of the format:
+{Initial explanation}
+
+1st Code Change:
+{Code Change}
+
+2nd Code Change:
+{Code Change}
+"
   (let ((changes '())
 	(explanations '())
 	(start 0)
-	(change-regex "\\(?:^\\|\n\n\\)\\(Lines \\([0-9]+\\)-\\([0-9]+\\):\n\n\\(?:.\\|\n\\)*?\\)\nReplace lines: \\([0-9]+\\)-\\([0-9]+\\)\n```\n\\(\\(?:.\\|\n\\)*?\\)```"))
-    (while (string-match change-regex response start)
-      (let ((explanation (match-string 1 response))
-	    (change-start (string-to-number (match-string 4 response)))
-	    (change-end (string-to-number (match-string 5 response)))
-	    (code (match-string 6 response)))
-	(setq explanations (append explanations (list explanation))
-	      changes (append changes
-			      (list (list :start change-start
-					  :end change-end
-					  :code code))))
+	(change-count 0)
+	(code-block-regex "Replace lines: \\([0-9]+\\)-\\([0-9]+\\)\n```\\(?:[[:alpha:]-]+\\)?\n\\(\\(?:.\\|\n\\)*?\\)```"))
+    (while (string-match code-block-regex response start)
+      (let ((change-start (string-to-number (match-string 1 response)))
+	    (change-end (string-to-number (match-string 2 response)))
+	    (code (match-string 3 response))
+	    (explanation-text (substring response start (match-beginning 0))))
+	;; Add explanation
+	(when (not (string-empty-p explanation-text))
+	  (setq change-count (1+ change-count))
+	  (setq explanations
+		(append explanations
+			(list (format "%s Code Change:\n%s\n\n"
+				      (gptel-copilot--ordinal change-count)
+				      (explanation-text))))))
+	;; Add change
+	(setq changes
+	      (append changes
+		      (list (list :start change-start
+				  :end change-end
+				  :code code))))
+
+	;; index in the response string
 	(setq start (match-end 0))))
 
-    ;; Check for any remaining explanation after the last change
-
-    ;; TODO use add-to-list
-    (when (string-match "\n\n\\(.*\\)\\'" response start)
-      (setq explanations (append explanations (list (match-string 1 response)))))
-
+    ;; Add any remaining text as the last explanation
+    (let ((remaining-text (substring response start)))
+      (when (not (string-empty-p remaining-text))
+	(setq change-count (1+ change-count))
+	(setq explanations
+	      (append explanations
+		      (list (concat (format "%s change:\n" (gptel-copilot--ordinal change-count))
+				    remaining-text))))))
     ;; Return plist with explanations and changes
     (list :explanations explanations
 	  :changes changes)))
@@ -250,6 +275,15 @@ Must be a number between 0 and 1, exclusive."
 	    (insert "<<<<<<<\n")
 	    ;; Update line offset
 	    (setq line-offset (+ line-offset (- new-lines old-lines) merge-line-count))))))))
+
+
+(defun gptel-copilot--ordinal (n)
+  "Convert integer N to its ordinal string representation."
+  (let ((suffixes '("th" "st" "nd" "rd" "th" "th" "th" "th" "th" "th")))
+    (if (and (> n 10) (< n 14))
+	(concat (number-to-string n) "th")
+      (concat (number-to-string n)
+	      (nth (mod n 10) suffixes)))))
 
 
 (provide 'gptel-copilot)
