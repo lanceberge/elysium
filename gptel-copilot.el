@@ -194,6 +194,7 @@ Must be a number between 0 and 1, exclusive."
 	(gptel--update-status " Waiting..." 'warning)))))
 
 
+;; TODO unit test
 (defun gptel-copilot-extract-changes (response)
   "Extract code changes from the ``` blocks, and explanations. Explanations will be of the format:
 {Initial explanation}
@@ -246,7 +247,11 @@ Must be a number between 0 and 1, exclusive."
 
 
 (defun gptel-copilot-apply-changes (buffer changes)
-  "Apply CHANGES to BUFFER in git merge format."
+  "Apply changes to buffer in a git merge format.
+We need to keep track of an offset of line numbers. For example, if we
+replace a block of six lines with three lines, then the line numbers provided by the LLM
+will need to be offset by -3. Similarly, the >>>>>>>, <<<<<<<, and ======= lines added
+will offset the LLM line numbers by 3"
   (with-current-buffer buffer
     (save-excursion
       (let ((line-offset 0))
@@ -256,24 +261,20 @@ Must be a number between 0 and 1, exclusive."
 		 (new-code (plist-get change :code))
 		 (old-lines (- end start -1))
 		 (new-lines (length (split-string new-code "\n")))
-		 (merge-line-count 3)) ; >>>>> and <<<<< and =====
-	    ;; Go to the start line
+		 (merge-line-count 3))	; Offsets from the three merge strings
 	    (goto-char (point-min))
 	    (forward-line (1- start))
-	    ;; Insert the git merge format
 	    (insert ">>>>>>>\n")
 	    (insert new-code)
 	    (unless (string-suffix-p "\n" new-code)
 	      (insert "\n"))
 	    (insert "=======\n")
-	    ;; Move the original content
 	    (let ((beg (point)))
 	      (forward-line old-lines)
 	      (let ((old-content (buffer-substring beg (point))))
 		(delete-region beg (point))
 		(insert old-content)))
 	    (insert "<<<<<<<\n")
-	    ;; Update line offset
 	    (setq line-offset (+ line-offset (- new-lines old-lines) merge-line-count))))))))
 
 
