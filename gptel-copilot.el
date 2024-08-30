@@ -164,6 +164,7 @@ Must be a number between 0 and 1, exclusive."
       (goto-char (point-max))
       (unless in-chat-buffer
 	(insert final-user-query "\n\n"))
+      (gptel--update-status " Waiting..." 'warning)
       (gptel-request
 	  full-query
 	:system gpt-base-prompt
@@ -196,7 +197,8 @@ Must be a number between 0 and 1, exclusive."
 
 	;; Add a message in the chat buffer indicating that changes were applied
 	(gptel--sanitize-model)
-	(gptel--update-status " Waiting..." 'warning)))))
+	(gptel--update-status " Ready" 'success)
+	))))
 
 
 ;; TODO unit test
@@ -222,13 +224,15 @@ Must be a number between 0 and 1, exclusive."
 	    (code (match-string 3 response))
 	    (explanation-text (substring response start (match-beginning 0))))
 
-	;; TODO make this different for the initial explanation
+	;; the initial explanation won't be preceded by nth Code Change
 	(when (not (string-empty-p explanation-text))
-	  (setq change-count (1+ change-count))
-	  (push (format "%s Code Change:\n%s\n\n"
-			(gptel-copilot--ordinal change-count)
-			explanation-text)
-		explanations))
+	  (push (if (= 0 change-count)
+		    explanation-text  ; For the first explanation, just use the text as is
+		  (format "%s Code Change:\n%s\n\n"
+			  (gptel-copilot--ordinal change-count)
+			  explanation-text))
+		explanations)
+	  (setq change-count (1+ change-count)))
 
 	(push (list :start change-start
 		    :end change-end
@@ -241,10 +245,13 @@ Must be a number between 0 and 1, exclusive."
     ;; Add any remaining text as the last explanation
     (let ((remaining-text (substring response start)))
       (when (not (string-empty-p remaining-text))
-	(setq change-count (1+ change-count))
-	(push (concat (format "%s change:\n" (gptel-copilot--ordinal change-count))
-		      remaining-text)
-	      explanations)))
+	(push (if (= 0 change-count)
+		  remaining-text
+		(format "%s Code Change:\n%s\n\n"
+			(gptel-copilot--ordinal change-count)
+			remaining-text))
+	      explanations)
+	))
     (list :explanations (nreverse explanations)
 	  :changes (nreverse changes))))
 
