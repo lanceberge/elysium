@@ -159,14 +159,11 @@ Must be a number between 0 and 1, exclusive."
 			     selected-code
 			     final-user-query)))
 
-    (message user-query)
+    (message (format  "Querying %s..." (gptel-backend-name gptel-backend)))
     (with-current-buffer chat-buffer
       (goto-char (point-max))
       (unless in-chat-buffer
-	(insert (if (derived-mode-p 'org-mode)
-		    "* "
-		  "### ")
-		final-user-query "\n"))
+	(insert final-user-query "\n\n"))
       (gptel-request
 	  full-query
 	:system gpt-base-prompt
@@ -259,7 +256,6 @@ We need to keep track of an offset of line numbers. For example, if we
 replace a block of six lines with three lines, then the line numbers provided by the LLM
 will need to be offset by -3. Similarly, the >>>>>>>, <<<<<<<, and ======= lines added
 will offset the LLM line numbers by 3"
-  ;; TODO code buffer will need to be a global var
   (with-current-buffer buffer
     (save-excursion
       (let ((line-offset 0))
