@@ -249,6 +249,7 @@ We need to keep track of an offset of line numbers. For example, if we
 replace a block of six lines with three lines, then the line numbers provided by the LLM
 will need to be offset by -3. Similarly, the >>>>>>>, <<<<<<<, and ======= lines added
 will offset the LLM line numbers by 3"
+  ;; TODO code buffer
   (with-current-buffer buffer
     (save-excursion
       (let ((line-offset 0))
@@ -258,20 +259,20 @@ will offset the LLM line numbers by 3"
 		 (new-code (plist-get change :code))
 		 (old-lines (- end start -1))
 		 (new-lines (length (split-string new-code "\n")))
-		 (merge-line-count 3))	; Offsets from the three merge strings
+		 (merge-line-count 3))  ; Offsets from the three merge strings
 	    (goto-char (point-min))
 	    (forward-line (1- start))
-	    (insert ">>>>>>>\n")
-	    (insert new-code)
-	    (unless (string-suffix-p "\n" new-code)
-	      (insert "\n"))
-	    (insert "=======\n")
+	    (insert "<<<<<<< HEAD\n")
 	    (let ((beg (point)))
 	      (forward-line old-lines)
 	      (let ((old-content (buffer-substring beg (point))))
 		(delete-region beg (point))
 		(insert old-content)))
-	    (insert "<<<<<<<\n")
+	    (insert "=======\n")
+	    (insert new-code)
+	    (unless (string-suffix-p "\n" new-code)
+	      (insert "\n"))
+	    (insert (format ">>>>>>> %s\n" (gptel-backend-name gptel-backend)))
 	    (setq line-offset (+ line-offset (- new-lines old-lines) merge-line-count))))))))
 
 
