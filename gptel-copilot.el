@@ -117,54 +117,60 @@ Must be a number between 0 and 1, exclusive."
       (set-window-buffer (selected-window) gpt-copilot--chat-buffer))))
 
 
-;; TODO test in the chat buffer
 ;; TODO instead of adding user-query to the full-query, it should be added to the
 ;; Chat buffer which is then sent to the request
 (defun gptel-copilot-query (user-query)
-  "Send a query to the GPTel Copilot from the current buffer."
-  (interactive "sUser Query: ")
-  ;; TODO nil at the start
+  "Send a query to the GPTel Copilot from the current buffer or chat buffer."
+  (interactive
+   (list
+    (if (eq (current-buffer) gpt-copilot--chat-buffer)
+	nil  ; We'll extract the query from the chat buffer
+      (read-string "User Query: "))))
   (unless (buffer-live-p gpt-copilot--chat-buffer)
     (gpt-copilot-setup-windows))
-
-  (let* ((code-buffer (if (eq (current-buffer) gpt-copilot--chat-buffer)
+  (let* ((in-chat-buffer (eq (current-buffer) gpt-copilot--chat-buffer))
+	 (code-buffer (if in-chat-buffer
 			  (window-buffer (next-window))
 			(current-buffer)))
-	 (prompt (buffer-substring-no-properties
-		  (region-beginning) (region-end)))
-
+	 (chat-buffer gpt-copilot--chat-buffer)
+	 (extracted-query
+	  (when in-chat-buffer
+	    (gptel-copilot-parse-user-query chat-buffer)))
+	 (final-user-query (or user-query extracted-query
+			       (user-error "No query provided")))
 	 (start-line (with-current-buffer code-buffer
 		       (if (use-region-p)
 			   (line-number-at-pos (region-beginning))
 			 1)))
-
 	 (end-line (with-current-buffer code-buffer
 		     (if (use-region-p)
 			 (line-number-at-pos (region-end))
 		       (line-number-at-pos (point-max)))))
-
 	 (selected-code (with-current-buffer code-buffer
 			  (if (use-region-p)
 			      (buffer-substring-no-properties (region-beginning) (region-end))
 			    (buffer-substring-no-properties (point-min) (point-max)))))
-
 	 (file-type (with-current-buffer code-buffer
 		      (symbol-name major-mode)))
-
 	 (full-query (format "\n\nFile type: %s\nLine range: %d-%d\n\nCode:\n%s\n\n%s"
 			     file-type
 			     start-line
 			     end-line
 			     selected-code
-			     user-query)))
+			     final-user-query)))
 
-    (with-current-buffer gpt-copilot--chat-buffer
+    (message user-query)
+    (with-current-buffer chat-buffer
       (goto-char (point-max))
-      (insert user-query "\n")
+      (unless in-chat-buffer
+	(insert (if (derived-mode-p 'org-mode)
+		    "* "
+		  "### ")
+		final-user-query "\n"))
       (gptel-request
 	  full-query
 	:system gpt-base-prompt
-	:buffer gpt-copilot--chat-buffer
+	:buffer chat-buffer
 	:callback #'gptel-copilot-handle-response))))
 
 
@@ -193,9 +199,6 @@ Must be a number between 0 and 1, exclusive."
 
 	;; Add a message in the chat buffer indicating that changes were applied
 	(gptel--sanitize-model)
-	;; (gptel--insert-response
-	;;  (format "%d change(s) have been applied to the code buffer in git merge format." (length changes))
-	;;  patch-message-info)
 	(gptel--update-status " Waiting..." 'warning)))))
 
 
@@ -256,7 +259,7 @@ We need to keep track of an offset of line numbers. For example, if we
 replace a block of six lines with three lines, then the line numbers provided by the LLM
 will need to be offset by -3. Similarly, the >>>>>>>, <<<<<<<, and ======= lines added
 will offset the LLM line numbers by 3"
-  ;; TODO code buffer
+  ;; TODO code buffer will need to be a global var
   (with-current-buffer buffer
     (save-excursion
       (let ((line-offset 0))
@@ -281,6 +284,23 @@ will offset the LLM line numbers by 3"
 	      (insert "\n"))
 	    (insert (format ">>>>>>> %s\n" (gptel-backend-name gptel-backend)))
 	    (setq line-offset (+ line-offset (- new-lines old-lines) merge-line-count))))))))
+
+
+(defun gptel-copilot-parse-user-query (buffer)
+  "Parse and extract the most recent user query from the buffer.
+The query is expected to be after the last '* ' (org-mode) or '### ' (markdown-mode) heading.
+Returns nil if no query is found."
+  (with-current-buffer buffer
+    (save-excursion
+      (goto-char (point-max))
+      (let ((case-fold-search t)
+	    (heading-regex (if (derived-mode-p 'org-mode)
+			       "^\\* "
+			     "^### ")))
+	(when (re-search-backward heading-regex nil t)
+	  (buffer-substring-no-properties
+	   (line-beginning-position 2)  ; Start from next line
+	   (point-max)))))))
 
 
 (defun gptel-copilot--ordinal (n)
