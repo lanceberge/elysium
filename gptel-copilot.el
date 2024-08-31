@@ -302,15 +302,3 @@ Returns nil if no query is found."
 
 
 (provide 'gptel-copilot)
-
-(let ((test-buffer (generate-new-buffer "*insert-test*")))
-  (unwind-protect
-      (progn
-	(with-current-buffer test-buffer
-	  (insert "First line\nSecond line\nThird line")
-	  (goto-char (point-min))
-	  (forward-line 1)
-	  (insert "Inserted text: ")
-	  (message (buffer-string)))
-	)
-    (kill-buffer test-buffer)))
