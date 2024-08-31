@@ -1,0 +1,43 @@
+name: ci
+
+on:
+  pull_request:
+    branches:
+      - '**'
+  push:
+    branches:
+      - '**'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: purcell/setup-emacs@master
+      with:
+        version: 24.4
+
+   - name: Install gptel
+      run: |
+        emacs --batch --eval "
+        (require 'package)
+        (add-to-list 'package-archives '(\"melpa\" . \"https://melpa.org/packages/\") t)
+        (package-initialize)
+        (package-refresh-contents)
+        (package-install 'gptel)"
+
+    - uses: leotaku/elisp-check@master
+      with:
+        check: melpa
+        file: gptel-copilot.el
+        ignore_warnings: false
+        warnings_as_errors: false
+
+    - uses: leotaku/elisp-check@master
+      with:
+        check: ert
+        file: test/gptel-copilot-test.el
+        ignore_warnings: false
+        warnings_as_errors: false
