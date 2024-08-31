@@ -1,6 +1,5 @@
 ;; -*- lexical-binding: t; -*-
 
-(require 'cl-generic)
 (require 'gptel)
 
 (defgroup gpt-copilot nil
@@ -75,8 +74,7 @@ Must be a number between 0 and 1, exclusive."
    "- Double-check that your line numbers align perfectly with the original code structure.\n"
    "- Do not show the full content after these modifications.\n"
 
-   "Remember: Accurate line numbers are CRITICAL. The range start_line to end_line must include ALL lines to be replaced, from the very first to the very last. Double-check every range before finalizing your response, paying special attention to the start_line to ensure it hasn't shifted down. Ensure that your line numbers perfectly match the original code structure without any overall shift.\n"
-   ))
+   "Remember: Accurate line numbers are CRITICAL. The range start_line to end_line must include ALL lines to be replaced, from the very first to the very last. Double-check every range before finalizing your response, paying special attention to the start_line to ensure it hasn't shifted down. Ensure that your line numbers perfectly match the original code structure without any overall shift.\n"))
 
 
 (defun gpt-copilot-toggle-window ()
@@ -255,21 +253,23 @@ we insert a sequence of lines in addition to the >>>>>>>, =======, <<<<<<< strin
 change, then the offset of the subsequent inserted lines will need to be offset by
 3 (number of merge strings) + the length of the newlines"
   (with-current-buffer buffer
-    (save-excursion
-      (let ((offset 0))
-	(dolist (change changes)
-	  (let* ((start (plist-get change :start))
-		 (end (plist-get change :end))
-		 (new-code (string-trim-right (plist-get change :code)))
-		 (new-lines (split-string new-code "\n" t)))
-	    (goto-char (point-min))
-	    (forward-line (1- (+ start offset)))
-	    (insert "<<<<<<< HEAD\n")
-	    (forward-line (- end start))
-	    (insert "=======\n")
-	    (insert new-code "\n")
-	    (insert (format ">>>>>>> %s\n" (gptel-backend-name gptel-backend)))
-	    (setq offset (+ offset 3 (length new-lines)))))))))
+    (let ((offset 0))
+      (dolist (change changes)
+	(let* ((start (+ (plist-get change :start) offset))
+	       (end (+ (plist-get change :end) offset))
+	       (new-code (string-trim-right (plist-get change :code)))
+	       (old-region-size (- end start))
+	       (new-region-size (+ (length (split-string new-code "\n" t)) 3))) ; 3 for merge markers
+	  (replace-region-contents
+	   (line-beginning-position start)
+	   (line-beginning-position end)
+	   (lambda ()
+	     (format "<<<<<<< HEAD\n%s=======\n%s\n>>>>>>> %s\n"
+		     (buffer-substring (line-beginning-position start)
+				       (line-beginning-position end))
+		     new-code
+		     (gptel-backend-name gptel-backend))))
+	  (setq offset (+ offset (- new-region-size old-region-size))))))))
 
 
 ;; TODO this could probably be replaced with something already in gptel
@@ -300,3 +300,15 @@ Returns nil if no query is found."
 
 
 (provide 'gptel-copilot)
+
+(let ((test-buffer (generate-new-buffer "*insert-test*")))
+  (unwind-protect
+      (progn
+	(with-current-buffer test-buffer
+	  (insert "First line\nSecond line\nThird line")
+	  (goto-char (point-min))
+	  (forward-line 1)
+	  (insert "Inserted text: ")
+	  (message (buffer-string)))
+	)
+    (kill-buffer test-buffer)))
