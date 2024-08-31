@@ -17,6 +17,8 @@ jobs:
       with:
         check: melpa
         file: gptel-copilot.el
+        ignore_warnings: false
+        warnings_as_errors: false
 
     - uses: leotaku/elisp-check@master
       with:
