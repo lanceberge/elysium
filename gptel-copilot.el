@@ -253,23 +253,23 @@ we insert a sequence of lines in addition to the >>>>>>>, =======, <<<<<<< strin
 change, then the offset of the subsequent inserted lines will need to be offset by
 3 (number of merge strings) + the length of the newlines"
   (with-current-buffer buffer
-    (let ((offset 0))
-      (dolist (change changes)
-	(let* ((start (+ (plist-get change :start) offset))
-	       (end (+ (plist-get change :end) offset))
-	       (new-code (string-trim-right (plist-get change :code)))
-	       (old-region-size (- end start))
-	       (new-region-size (+ (length (split-string new-code "\n" t)) 3))) ; 3 for merge markers
-	  (replace-region-contents
-	   (line-beginning-position start)
-	   (line-beginning-position end)
-	   (lambda ()
-	     (format "<<<<<<< HEAD\n%s=======\n%s\n>>>>>>> %s\n"
-		     (buffer-substring (line-beginning-position start)
-				       (line-beginning-position end))
-		     new-code
-		     (gptel-backend-name gptel-backend))))
-	  (setq offset (+ offset (- new-region-size old-region-size))))))))
+    (save-excursion
+      (let ((offset 0))
+	(dolist (change changes)
+	  (let* ((start (plist-get change :start))
+		 (end (plist-get change :end))
+		 (new-code (string-trim-right (plist-get change :code)))
+		 (new-lines (split-string new-code "\n" t)))
+	    (goto-char (point-min))
+	    (forward-line (1- (+ start offset)))
+	    (insert "<<<<<<< HEAD\n")
+
+	    ;; Skip forward over the previous code
+	    (forward-line (+ 1 (- end start)))
+	    (insert "=======\n")
+	    (insert new-code "\n")
+	    (insert (format ">>>>>>> %s\n" (gptel-backend-name gptel-backend)))
+	    (setq offset (+ offset 3 (length new-lines)))))))))
 
 
 ;; TODO this could probably be replaced with something already in gptel
