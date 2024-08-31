@@ -1,0 +1,30 @@
+[[http://www.gnu.org/licenses/gpl-3.0.txt][file:https://img.shields.io/badge/license-GPL_3-green.svg]]
+[[https://github.com/lanceberge/gptel-copilot/actions][file:https://github.com/lanceberge/gptel-copilot/actions/workflows/ci.yml/badge.svg]]
+
+#+BEGIN_SRC emacs-lisp :results none
+(use-package gptel
+  :custom
+  (gptel-model "claude-3-5-sonnet-20240620")
+  :config
+  (defun read-file-contents (file-path)
+    "Read the contents of FILE-PATH and return it as a string."
+    (with-temp-buffer
+      (insert-file-contents file-path)
+      (buffer-string)))
+  (defun gptel-api-key ()
+    (read-file-contents "~/secrets/claude_key"))
+  (setq
+   gptel-backend (gptel-make-anthropic "Claude"
+		   :stream t
+		   :key #'gptel-api-key)))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp :results none
+(use-package smerge-mode
+  :ensure nil
+  :hook (prog-mode . smerge-mode))
+#+END_SRC
+
+* Planned Features
+
+- Implementing [[https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching][Prompt Caching]] with Anthropic to let us send more queries before getting rate-limited
