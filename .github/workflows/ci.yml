@@ -16,6 +16,8 @@ jobs:
     - uses: actions/checkout@v4
 
     - uses: purcell/setup-emacs@master
+      with:
+        version: 24.4
 
     - uses: leotaku/elisp-check@master
       with:
