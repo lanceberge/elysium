@@ -163,10 +163,10 @@ Must be a number between 0 and 1, exclusive."
 	(insert final-user-query "\n\n"))
       (gptel--update-status " Waiting..." 'warning)
       (gptel-request
-       full-query
-       :system gpt-base-prompt
-       :buffer chat-buffer
-       :callback #'gptel-copilot-handle-response)))
+	  full-query
+	:system gpt-base-prompt
+	:buffer chat-buffer
+	:callback #'gptel-copilot-handle-response)))
   (gptel--update-status " Ready" 'success))
 
 
@@ -198,7 +198,6 @@ Must be a number between 0 and 1, exclusive."
 	))))
 
 
-;; TODO unit test
 (defun gptel-copilot-extract-changes (response)
   "Extract code changes from the ``` blocks, and explanations. Explanations will be of the format:
 {Initial explanation}
@@ -248,39 +247,29 @@ Must be a number between 0 and 1, exclusive."
 	  :changes (nreverse changes))))
 
 
-;; TODO unit test
 (defun gptel-copilot-apply-changes (buffer changes)
   "Apply changes to buffer in a git merge format.
-We need to keep track of an offset of line numbers. For example, if we
-replace a block of six lines with three lines, then the line numbers provided by the LLM
-will need to be offset by -3. Similarly, the >>>>>>>, <<<<<<<, and ======= lines added
-will offset the LLM line numbers by 3"
+We need to keep track of an offset of line numbers. Because the AI gives us line numbers
+based on the current buffer, all inserted changes will offset those line numbers. So if
+we insert a sequence of lines in addition to the >>>>>>>, =======, <<<<<<< strings for a
+change, then the offset of the subsequent inserted lines will need to be offset by
+3 (number of merge strings) + the length of the newlines"
   (with-current-buffer buffer
     (save-excursion
-      (let ((line-offset 0))
+      (let ((offset 0))
 	(dolist (change changes)
-	  (let* ((start (+ (plist-get change :start) line-offset))
-		 (end (+ (plist-get change :end) line-offset))
-		 (new-code (plist-get change :code))
-		 (old-lines (- end start -1))
-		 (new-lines (length (split-string new-code "\n")))
-		 (merge-line-count 3)) ; Offsets from the three merge strings
-
-	    ;; TODO why is lowercase getting inserted into the undo history??
+	  (let* ((start (plist-get change :start))
+		 (end (plist-get change :end))
+		 (new-code (string-trim-right (plist-get change :code)))
+		 (new-lines (split-string new-code "\n" t)))
 	    (goto-char (point-min))
-	    (forward-line (1- start))
+	    (forward-line (1- (+ start offset)))
 	    (insert "<<<<<<< HEAD\n")
-	    (let ((beg (point)))
-	      (forward-line old-lines)
-	      (let ((old-content (buffer-substring beg (point))))
-		(delete-region beg (point))
-		(insert old-content)))
+	    (forward-line (- end start))
 	    (insert "=======\n")
-	    (insert new-code)
-	    (unless (string-suffix-p "\n" new-code)
-	      (insert "\n"))
+	    (insert new-code "\n")
 	    (insert (format ">>>>>>> %s\n" (gptel-backend-name gptel-backend)))
-	    (setq line-offset (+ line-offset (- new-lines old-lines) merge-line-count))))))))
+	    (setq offset (+ offset 3 (length new-lines)))))))))
 
 
 ;; TODO this could probably be replaced with something already in gptel
