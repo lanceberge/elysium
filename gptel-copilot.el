@@ -266,9 +266,11 @@ change, then the offset of the subsequent inserted lines will need to be offset 
 
 	    ;; Skip forward over the previous code
 	    (forward-line (+ 1 (- end start)))
-	    (insert "=======\n")
-	    (insert new-code "\n")
-	    (insert (format ">>>>>>> %s\n" (gptel-backend-name gptel-backend)))
+
+	    (insert (format "=======\n%s\n>>>>>>> %s\n"
+			    new-code
+			    (gptel-backend-name gptel-backend)))
+
 	    (setq offset (+ offset 3 (length new-lines)))))))))
 
 
