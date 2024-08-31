@@ -14,6 +14,7 @@ jobs:
     - uses: purcell/setup-emacs@master
       with:
         version: 24.4
+
     - name: Install gptel
       run: |
         emacs --batch --eval "
@@ -21,7 +22,9 @@ jobs:
         (add-to-list 'package-archives '(\"melpa\" . \"https://melpa.org/packages/\") t)
         (package-initialize)
         (package-refresh-contents)
-        (package-install 'gptel)"
+        (package-install 'gptel)
+        (setq debug-on-error t)
+        (require 'gptel)"
 
     - uses: leotaku/elisp-check@master
       with:
