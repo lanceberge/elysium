@@ -56,42 +56,42 @@
   (let ((test-buffer (generate-new-buffer "*test-buffer*"))
 	(test-backend (gptel--make-backend
 		       :name "test-backend"))
-	((expected-result
-	  (concat "Line 1\n"
-		  "Line 2\n"
-		  "<<<<<<< HEAD\n"
-		  "Line 3\n"
-		  "Line 4\n"
-		  "Line 5\n"
-		  "=======\n"
-		  "New Line 3\n"
-		  "New Line 4\n"
-		  ">>>>>>> test-backend\n"
-		  "Line 6\n"
-		  "<<<<<<< HEAD\n"
-		  "Line 7\n"
-		  "Line 8\n"
-		  "Line 9\n"
-		  "Line 10\n"
-		  "=======\n"
-		  "New Line 7\n"
-		  "New Line 8\n"
-		  "New Line 9\n"
-		  "New Line 10\n"
-		  "New Line 11\n"
-		  ">>>>>>> test-backend\n"))
+	(expected-result
+	 (concat "Line 1\n"
+		 "Line 2\n"
+		 "<<<<<<< HEAD\n"
+		 "Line 3\n"
+		 "Line 4\n"
+		 "Line 5\n"
+		 "=======\n"
+		 "New Line 3\n"
+		 "New Line 4\n"
+		 ">>>>>>> test-backend\n"
+		 "Line 6\n"
+		 "<<<<<<< HEAD\n"
+		 "Line 7\n"
+		 "Line 8\n"
+		 "Line 9\n"
+		 "Line 10\n"
+		 "=======\n"
+		 "New Line 7\n"
+		 "New Line 8\n"
+		 "New Line 9\n"
+		 "New Line 10\n"
+		 "New Line 11\n"
+		 ">>>>>>> test-backend\n"))
 
-	 ;; Test both newline and no newline after changes
-	 (changes '((:start 3 :end 5 :code "New Line 3\nNew Line 4\n")
-		    (:start 7 :end 10 :code
-			    "New Line 7\nNew Line 8\nNew Line 9\nNew Line 10\nNew Line 11")))
-	 (unwind-protect
-	     (progn
-	       (with-current-buffer test-buffer
-		 (insert original-content)
-		 (setq-local gptel-backend test-backend))
+	;; Test both newline and no newline after changes
+	(changes '((:start 3 :end 5 :code "New Line 3\nNew Line 4\n")
+		   (:start 7 :end 10 :code
+			   "New Line 7\nNew Line 8\nNew Line 9\nNew Line 10\nNew Line 11"))))
+    (unwind-protect
+	(progn
+	  (with-current-buffer test-buffer
+	    (insert original-content)
+	    (setq-local gptel-backend test-backend))
 
-	       (gptel-copilot-apply-changes test-buffer changes)
+	  (gptel-copilot-apply-changes test-buffer changes)
 
-	       (with-current-buffer test-buffer
-		 (should (string= (buffer-string) expected-result)))))))))
+	  (with-current-buffer test-buffer
+	    (should (string= (buffer-string) expected-result)))))))
