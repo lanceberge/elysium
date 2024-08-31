@@ -1,7 +1,6 @@
 ;; -*- lexical-binding: t; -*-
 (require 'ert)
 (require 'gptel-copilot)
-(require 'gptel)
 
 (setq-local example-response
 	    (concat "Certainly! Here are some code changes: \n"
