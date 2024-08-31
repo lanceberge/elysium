@@ -201,7 +201,7 @@ Must be a number between 0 and 1, exclusive."
 ;; TODO find out if it shows the first explanation
 (defun gptel-copilot-handle-response (response info)
   "Handle the RESPONSE from the GPTel Copilot.
-Changes will be applied in a git merge format.  INFO is passed into
+The changes will be applied in a git merge format.  INFO is passed into
 this function from the `gptel-request' function."
   (when response
     (let* ((code-buffer (if (eq (current-buffer) gptel-copilot--chat-buffer)
@@ -218,7 +218,7 @@ this function from the `gptel-request' function."
       ;; Insert explanations into chat buffer
       (with-current-buffer gptel-copilot--chat-buffer
 	(dolist (explanation explanations)
-	  (let ((explanation-info (list :buffer gptel-copilot--chat-buffer
+	  (let ((explanation-info (list :buffer (plist-get info :buffer)
 					:position (point-max-marker)
 					:in-place t)))
 	    (gptel--insert-response (string-trim explanation) explanation-info)))
@@ -228,7 +228,7 @@ this function from the `gptel-request' function."
 
 
 (defun gptel-copilot-extract-changes (response)
-  "Extract code changes and explanations from RESPONSE.
+  "Extract the code-changes and explanations from RESPONSE.
 Explanations will be of the format:
 {Initial explanation}
 
@@ -276,10 +276,10 @@ Explanations will be of the format:
 	  :changes (nreverse changes))))
 
 
-(defun gptel-copilot-apply-changes (buffer changes)
-  "Apply CHANGES to BUFFER in a git merge format.
+(defun gptel-copilot-apply-code-changes (buffer code-changes)
+  "Apply CODE-CHANGES to BUFFER in a git merge format.
 We need to keep track of an offset of line numbers.  Because the AI gives us
-line numbers based on the current buffer, all inserted changes will offset
+line numbers based on the current buffer, all inserted code-changes will offset
 those line numbers.  So if we insert a sequence of lines in addition to the
 >>>>>>>, =======, <<<<<<< strings for a change, then the offset of the
 subsequent inserted lines will need to be offset by
@@ -287,7 +287,7 @@ subsequent inserted lines will need to be offset by
   (with-current-buffer buffer
     (save-excursion
       (let ((offset 0))
-	(dolist (change changes)
+	(dolist (change code-changes)
 	  (let* ((start (plist-get change :start))
 		 (end (plist-get change :end))
 		 (new-code (string-trim-right (plist-get change :code)))
