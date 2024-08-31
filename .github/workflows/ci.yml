@@ -1,40 +1,69 @@
-name: ci
+name: CI
+
 on:
-  pull_request:
-    branches:
-      - '**'
   push:
-    branches:
-      - '**'
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  workflow_dispatch:
+
 jobs:
-  check:
+  test-melpa:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        emacs_version:
+          - 27.1
+          - 29.4
+        ignore_warnings:
+          - false
+        warnings_as_errors:
+          - true
+        check:
+          - melpa
+        file:
+          - gptel-copilot.el
+
     steps:
-    - uses: actions/checkout@v4
-    - uses: purcell/setup-emacs@master
-      with:
-        version: 24.4
+      - uses: actions/checkout@v4
+      - uses: purcell/setup-emacs@master
+        with:
+          version: ${{ matrix.emacs_version }}
+      - uses: leotaku/elisp-check@master
+        with:
+          check: ${{ matrix.check }}
+          file: ${{ matrix.file }}
+          ignore_warnings: ${{ matrix.ignore_warnings }}
+          warnings_as_errors: ${{ matrix.warnings_as_errors }}
 
-    - name: Install gptel
-      run: |
-        emacs --batch --eval "
-        (require 'package)
-        (add-to-list 'package-archives '(\"melpa\" . \"https://melpa.org/packages/\") t)
-        (package-initialize)
-        (package-refresh-contents)
-        (package-install 'gptel)
-        (setq debug-on-error t)
-        (require 'gptel)"
+  test-ert:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        emacs_version:
+          - 27.1
+          - 29.3
+        ignore_warnings:
+          - false
+        warnings_as_errors:
+          - true
+        check:
+          - ert
+        file:
+          - test/gptel-copilot-test.el
 
-    - uses: leotaku/elisp-check@master
-      with:
-        check: melpa
-        file: gptel-copilot.el
-        ignore_warnings: false
-        warnings_as_errors: false
-    - uses: leotaku/elisp-check@master
-      with:
-        check: ert
-        file: test/gptel-copilot-test.el
-        ignore_warnings: false
-        warnings_as_errors: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: purcell/setup-emacs@master
+        with:
+          version: ${{ matrix.emacs_version }}
+
+      - uses: leotaku/elisp-check@master
+        with:
+          check: ${{ matrix.check }}
+          file: ${{ matrix.file }}
+          ignore_warnings: ${{ matrix.ignore_warnings }}
+          warnings_as_errors: ${{ matrix.warnings_as_errors }}
