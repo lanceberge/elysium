@@ -116,8 +116,6 @@ Must be a number between 0 and 1, exclusive."
     (gptel-copilot-setup-windows)))
 
 
-;; TODO nil doesn't work because of the gptel-command
-;; nil should have the var open in the background
 (defun gptel-copilot-setup-windows ()
   "Set up the coding assistant layout with the chat window."
   (unless (buffer-live-p gptel-copilot--chat-buffer)
