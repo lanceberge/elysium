@@ -1,31 +1,60 @@
-;; -*- lexical-binding: t; -*-
+;;; gptel-copilot.el --- Automatically apply LLM-created code-suggestions -*- lexical-binding: t; -*-
 
+;; Copyright (C) 2024  Lance Bergeron
+
+;; Author: Lance Bergeron <bergeron.lance6@gmail.com>
+;; Version: 0.0.1
+;; Package-Requires: ((emacs "24.4"))
+;; URL: https://github.com/lanceberge/gptel-copilot/
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+;; This file is NOT part of GNU Emacs.
+
+;;; Commentary:
+
+;; This package extends on gptel.el.  It uses that package to generate code
+;; suggestions based on the user's request.  Those code suggestions will then
+;; automatically be applied to the buffer in the format of a git merge.
+
+;;; Code:
 (require 'gptel)
 
-(defgroup gpt-copilot nil
-  "Apply code changes using gptel"
+(defgroup gptel-copilot nil
+  "Apply code changes using gptel."
   :group 'hypermedia)
 
-(defcustom gpt-copilot-window-size 0.33
+(defcustom gptel-copilot-window-size 0.33
   "Size of the GPT Copilot chat window as a fraction of the frame.
 Must be a number between 0 and 1, exclusive."
   :type 'float
-  :group 'gpt-copilot
+  :group 'gptel-copilot
   :set (lambda (symbol value)
 	 (if (and (numberp value)
 		  (< 0 value 1))
 	     (set-default symbol value)
-	   (user-error "gpt-copilot-window-size must be a number between 0 and 1, exclusive"))))
+	   (user-error "gptel-copilot-window-size must be a number between 0 and 1, exclusive"))))
 
-(defcustom gpt-copilot-window-style 'vertical
-  "Specify the orientation. It can be \='horizontal, '\=vertical, or nil."
+(defcustom gptel-copilot-window-style 'vertical
+  "Specify the orientation.  It can be \='horizontal, '\=vertical, or nil."
   :type '(choice (const :tag "Horizontal" horizontal)
 		 (const :tag "Vertical" vertical)
 		 (const :tag "None" nil)))
 
-(defvar gpt-copilot--chat-buffer nil)
+(defvar gptel-copilot--chat-buffer nil)
 
-(defvar gpt-base-prompt
+(defvar gptel-copilot-base-prompt
   (concat
    ;; The prompt is originally from avante.nvim:
    ;; https://github.com/yetone/avante.nvim/blob/main/lua/avante/llm.lua
@@ -77,57 +106,58 @@ Must be a number between 0 and 1, exclusive."
    "Remember: Accurate line numbers are CRITICAL. The range start_line to end_line must include ALL lines to be replaced, from the very first to the very last. Double-check every range before finalizing your response, paying special attention to the start_line to ensure it hasn't shifted down. Ensure that your line numbers perfectly match the original code structure without any overall shift.\n"))
 
 
-(defun gpt-copilot-toggle-window ()
+(defun gptel-copilot-toggle-window ()
+  "Toggle the copilot chat window."
   (interactive)
-  (if (and (buffer-live-p gpt-copilot--chat-buffer)
-	   (get-buffer-window gpt-copilot--chat-buffer))
-      (delete-window (get-buffer-window gpt-copilot--chat-buffer))
+  (if (and (buffer-live-p gptel-copilot--chat-buffer)
+	   (get-buffer-window gptel-copilot--chat-buffer))
+      (delete-window (get-buffer-window gptel-copilot--chat-buffer))
 
-    (gpt-copilot-setup-windows)))
+    (gptel-copilot-setup-windows)))
 
 
 ;; TODO nil doesn't work because of the gptel-command
 ;; nil should have the var open in the background
-(defun gpt-copilot-setup-windows ()
+(defun gptel-copilot-setup-windows ()
   "Set up the coding assistant layout with the chat window."
-  (unless (buffer-live-p gpt-copilot--chat-buffer)
-    (setq gpt-copilot--chat-buffer
+  (unless (buffer-live-p gptel-copilot--chat-buffer)
+    (setq gptel-copilot--chat-buffer
 	  (gptel "*Gptel Copilot*")))
 
-  (when gpt-copilot-window-style
+  (when gptel-copilot-window-style
     (delete-other-windows)
 
     (let* ((main-buffer (current-buffer))
 	   (main-window (selected-window))
-	   (split-size (floor (* (if (eq gpt-copilot-window-style 'vertical)
+	   (split-size (floor (* (if (eq gptel-copilot-window-style 'vertical)
 				     (frame-width)
 				   (frame-height))
-				 (- 1 gpt-copilot-window-size)))))
-      (with-current-buffer gpt-copilot--chat-buffer)
-      (if (eq gpt-copilot-window-style 'vertical)
+				 (- 1 gptel-copilot-window-size)))))
+      (with-current-buffer gptel-copilot--chat-buffer)
+      (if (eq gptel-copilot-window-style 'vertical)
 	  (split-window-right split-size)
 	(split-window-below split-size))
       (set-window-buffer main-window main-buffer)
       (other-window 1)
-      (set-window-buffer (selected-window) gpt-copilot--chat-buffer))))
+      (set-window-buffer (selected-window) gptel-copilot--chat-buffer))))
 
 
 ;; TODO instead of adding user-query to the full-query, it should be added to the
 ;; Chat buffer which is then sent to the request
 (defun gptel-copilot-query (user-query)
-  "Send a query to the GPTel Copilot from the current buffer or chat buffer."
+  "Send USER-QUERY the GPTel Copilot from the current buffer or chat buffer."
   (interactive
    (list
-    (if (eq (current-buffer) gpt-copilot--chat-buffer)
+    (if (eq (current-buffer) gptel-copilot--chat-buffer)
 	nil		; We'll extract the query from the chat buffer
       (read-string "User Query: "))))
-  (unless (buffer-live-p gpt-copilot--chat-buffer)
-    (gpt-copilot-setup-windows))
-  (let* ((in-chat-buffer (eq (current-buffer) gpt-copilot--chat-buffer))
+  (unless (buffer-live-p gptel-copilot--chat-buffer)
+    (gptel-copilot-setup-windows))
+  (let* ((in-chat-buffer (eq (current-buffer) gptel-copilot--chat-buffer))
 	 (code-buffer (if in-chat-buffer
 			  (window-buffer (next-window))
 			(current-buffer)))
-	 (chat-buffer gpt-copilot--chat-buffer)
+	 (chat-buffer gptel-copilot--chat-buffer)
 	 (extracted-query
 	  (when in-chat-buffer
 	    (gptel-copilot-parse-user-query chat-buffer)))
@@ -162,7 +192,7 @@ Must be a number between 0 and 1, exclusive."
       (gptel--update-status " Waiting..." 'warning)
       (gptel-request
 	  full-query
-	:system gpt-base-prompt
+	:system gptel-copilot-base-prompt
 	:buffer chat-buffer
 	:callback #'gptel-copilot-handle-response)))
   (gptel--update-status " Ready" 'success))
@@ -170,9 +200,11 @@ Must be a number between 0 and 1, exclusive."
 
 ;; TODO find out if it shows the first explanation
 (defun gptel-copilot-handle-response (response info)
-  "Handle the response from the GPTel Copilot, applying changes in git merge format."
+  "Handle the RESPONSE from the GPTel Copilot.
+Changes will be applied in a git merge format.  INFO is passed into
+this function from the `gptel-request' function."
   (when response
-    (let* ((code-buffer (if (eq (current-buffer) gpt-copilot--chat-buffer)
+    (let* ((code-buffer (if (eq (current-buffer) gptel-copilot--chat-buffer)
 			    (window-buffer (next-window))
 			  (current-buffer)))
 	   (extracted-data (gptel-copilot-extract-changes response))
@@ -184,28 +216,27 @@ Must be a number between 0 and 1, exclusive."
 	(gptel-copilot-apply-changes code-buffer changes))
 
       ;; Insert explanations into chat buffer
-      (with-current-buffer gpt-copilot--chat-buffer
+      (with-current-buffer gptel-copilot--chat-buffer
 	(dolist (explanation explanations)
-	  (let ((explanation-info (list :buffer gpt-copilot--chat-buffer
+	  (let ((explanation-info (list :buffer gptel-copilot--chat-buffer
 					:position (point-max-marker)
 					:in-place t)))
 	    (gptel--insert-response (string-trim explanation) explanation-info)))
 
 	;; Add a message in the chat buffer indicating that changes were applied
-	(gptel--sanitize-model)
-	))))
+	(gptel--sanitize-model)))))
 
 
 (defun gptel-copilot-extract-changes (response)
-  "Extract code changes from the ``` blocks, and explanations. Explanations will be of the format:
+  "Extract code changes and explanations from RESPONSE.
+Explanations will be of the format:
 {Initial explanation}
 
 1st Code Change:
 {Code Change}
 
 2nd Code Change:
-{Code Change}
-"
+{Code Change}"
   (let ((changes '())
 	(explanations '())
 	(start 0)
@@ -246,12 +277,13 @@ Must be a number between 0 and 1, exclusive."
 
 
 (defun gptel-copilot-apply-changes (buffer changes)
-  "Apply changes to buffer in a git merge format.
-We need to keep track of an offset of line numbers. Because the AI gives us line numbers
-based on the current buffer, all inserted changes will offset those line numbers. So if
-we insert a sequence of lines in addition to the >>>>>>>, =======, <<<<<<< strings for a
-change, then the offset of the subsequent inserted lines will need to be offset by
-3 (number of merge strings) + the length of the newlines"
+  "Apply CHANGES to BUFFER in a git merge format.
+We need to keep track of an offset of line numbers. Because the AI gives us line
+ numbers based on the current buffer, all inserted changes will offset those
+ line numbers. So if
+we insert a sequence of lines in addition to the >>>>>>>, =======, <<<<<<<
+ strings for a change, then the offset of the subsequent inserted lines will
+ need to be offset by 3 (number of merge strings) + the length of the newlines"
   (with-current-buffer buffer
     (save-excursion
       (let ((offset 0))
@@ -276,9 +308,9 @@ change, then the offset of the subsequent inserted lines will need to be offset 
 
 ;; TODO this could probably be replaced with something already in gptel
 (defun gptel-copilot-parse-user-query (buffer)
-  "Parse and extract the most recent user query from the buffer.
-The query is expected to be after the last '* ' (org-mode) or '### ' (markdown-mode) heading.
-Returns nil if no query is found."
+  "Parse and extract the most recent user query from BUFFER.
+The query is expected to be after the last '* ' (org-mode) or
+ '### ' (markdown-mode) heading.  Returns nil if no query is found."
   (with-current-buffer buffer
     (save-excursion
       (goto-char (point-max))
@@ -302,3 +334,5 @@ Returns nil if no query is found."
 
 
 (provide 'gptel-copilot)
+
+;;; gptel-copilot.el ends here
