@@ -13,6 +13,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - uses: actions/checkout@v4
+
+    - uses: purcell/setup-emacs@master
+
     - uses: leotaku/elisp-check@master
       with:
         check: melpa
