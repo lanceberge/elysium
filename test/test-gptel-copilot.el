@@ -1,27 +1,51 @@
-;; -*- lexical-binding: t; -*-
-(require 'ert)
+;;; test-gptel-copilot.el --- gptel-copilot tests-*- lexical-binding: t; -*-
+
+;; Copyright (C) 2024  Free Software Foundation, Inc.
+
+;; Author: Lance Bergeron <bergeron.lance6@gmail.com>
+
+;; This file is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 3, or (at your option)
+;; any later version.
+
+;; This file is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+
+;;; Commentary:
+;;
+;; Tests
+;;
+
+;;; Code:
 (require 'gptel-copilot)
+(require 'ert)
 
-(setq-local example-response
-	    (concat "Certainly! Here are some code changes: \n"
-		    "Replace Lines: 1-9\n"
-		    "```go\n"
-		    "package main\n"
-		    "import \"fmt\"\n"
-		    "func main() {\n"
-		    "fmt.Println(\"hello world\")\n"
-		    "}\n"
-		    "```\n"
-		    "This is a hello world function\n"
-		    "Replace Lines 10-12\n"
-		    "```bash\n"
-		    "mkdir hello-world\n"
-		    "./hello_world\n"
-		    "```\n"
-		    "These code changes will run the unit test"))
 
-(ert-deftest extract-changes-test ()
-  (let* ((response (gptel-copilot-extract-changes example-response))
+(ert-deftest test-extract-changes ()
+  (let* ((example-response
+	  (concat "Certainly! Here are some code changes: \n"
+		  "Replace Lines: 1-9\n"
+		  "```go\n"
+		  "package main\n"
+		  "import \"fmt\"\n"
+		  "func main() {\n"
+		  "fmt.Println(\"hello world\")\n"
+		  "}\n"
+		  "```\n"
+		  "This is a hello world function\n"
+		  "Replace Lines 10-12\n"
+		  "```bash\n"
+		  "mkdir hello-world\n"
+		  "./hello_world\n"
+		  "```\n"
+		  "These code changes will run the unit test"))
+	 (response (gptel-copilot-extract-changes example-response))
 	 (explanations (plist-get response :explanations))
 	 (changes (plist-get response :changes)))
     (should (equal changes
@@ -35,7 +59,7 @@
 		     "1st Code Change:\n\nThis is a hello world function\n"
 		     "2nd Code Change:\n\nThese code changes will run the unit test")))))
 
-(ert-deftest gptel-copilot-apply-changes-multiple-changes ()
+(ert-deftest test-apply-multiple-changes ()
   "Test that the offset is properly setup when applying multiple changes"
   (let ((test-buffer (generate-new-buffer "*test-buffer*"))
 	(test-backend (gptel--make-backend
@@ -94,3 +118,5 @@
 
 	  (with-current-buffer test-buffer
 	    (should (string= (buffer-string) expected-result)))))))
+
+(provide 'test-gptel-copilot)

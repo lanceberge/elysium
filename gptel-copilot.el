@@ -44,7 +44,7 @@ Must be a number between 0 and 1, exclusive."
 	 (if (and (numberp value)
 		  (< 0 value 1))
 	     (set-default symbol value)
-	   (user-error "gptel-copilot-window-size must be a number between 0 and 1, exclusive"))))
+	   (user-error "Gptel-copilot-window-size must be a number between 0 and 1, exclusive"))))
 
 (defcustom gptel-copilot-window-style 'vertical
   "Specify the orientation.  It can be \='horizontal, '\=vertical, or nil."
@@ -213,7 +213,7 @@ this function from the `gptel-request' function."
 
       ;; Apply changes to code buffer in git merge format
       (when changes
-	(gptel-copilot-apply-changes code-buffer changes))
+	(gptel-copilot-apply-code-changes code-buffer changes))
 
       ;; Insert explanations into chat buffer
       (with-current-buffer gptel-copilot--chat-buffer
