@@ -1,10 +1,7 @@
-;; TODO easily save and reload the AI memory - context for different projects
-;; TODO copy contexts of those cursor prompts into an initial context setup
-;; TODO test with org
+;; -*- lexical-binding: t; -*-
 
 (require 'cl-generic)
 (require 'gptel)
-
 
 (defgroup gpt-copilot nil
   "Apply code changes using gptel"
@@ -97,7 +94,7 @@ Must be a number between 0 and 1, exclusive."
   "Set up the coding assistant layout with the chat window."
   (unless (buffer-live-p gpt-copilot--chat-buffer)
     (setq gpt-copilot--chat-buffer
-	  (gptel "*Gptel-Copilot*")))
+	  (gptel "*Gptel Copilot*")))
 
   (when gpt-copilot-window-style
     (delete-other-windows)
@@ -166,10 +163,10 @@ Must be a number between 0 and 1, exclusive."
 	(insert final-user-query "\n\n"))
       (gptel--update-status " Waiting..." 'warning)
       (gptel-request
-	  full-query
-	:system gpt-base-prompt
-	:buffer chat-buffer
-	:callback #'gptel-copilot-handle-response)))
+       full-query
+       :system gpt-base-prompt
+       :buffer chat-buffer
+       :callback #'gptel-copilot-handle-response)))
   (gptel--update-status " Ready" 'success))
 
 
@@ -217,41 +214,36 @@ Must be a number between 0 and 1, exclusive."
 	(start 0)
 	(change-count 0)
 	(code-block-regex
-	 "Replace lines: \\([0-9]+\\)-\\([0-9]+\\)\n```\\(?:[[:alpha:]-]+\\)?\n\\(\\(?:.\\|\n\\)*?\\)```"))
+	 "Replace [Ll]ines:? \\([0-9]+\\)-\\([0-9]+\\)\n```\\(?:[[:alpha:]-]+\\)?\n\\(\\(?:.\\|\n\\)*?\\)```"))
     (while (string-match code-block-regex response start)
       (let ((change-start (string-to-number (match-string 1 response)))
 	    (change-end (string-to-number (match-string 2 response)))
 	    (code (match-string 3 response))
 	    (explanation-text (substring response start (match-beginning 0))))
-
 	;; the initial explanation won't be preceded by nth Code Change
 	(when (not (string-empty-p explanation-text))
 	  (push (if (= 0 change-count)
 		    explanation-text  ; For the first explanation, just use the text as is
-		  (format "%s Code Change:\n%s\n\n"
+		  (format "%s Code Change:\n%s"
 			  (gptel-copilot--ordinal change-count)
 			  explanation-text))
 		explanations)
 	  (setq change-count (1+ change-count)))
-
 	(push (list :start change-start
 		    :end change-end
 		    :code code)
 	      changes)
-
 	;; Update start index in the response string
 	(setq start (match-end 0))))
-
     ;; Add any remaining text as the last explanation
     (let ((remaining-text (substring response start)))
       (when (not (string-empty-p remaining-text))
 	(push (if (= 0 change-count)
 		  remaining-text
-		(format "%s Code Change:\n%s\n\n"
+		(format "%s Code Change:\n%s"
 			(gptel-copilot--ordinal change-count)
 			remaining-text))
-	      explanations)
-	))
+	      explanations)))
     (list :explanations (nreverse explanations)
 	  :changes (nreverse changes))))
 
