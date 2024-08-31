@@ -1,4 +1,4 @@
-;;; test-gptel-copilot.el --- gptel-copilot tests-*- lexical-binding: t; -*-
+;;; test-gptel-copilot.el --- gptel-copilot tests-*- lexical-binding: t; package-lint-main-file: "../gptel-copilot.el"; -*--*-
 
 ;; Copyright (C) 2024  Free Software Foundation, Inc.
 
@@ -113,9 +113,11 @@
 	    (insert test-lines)
 	    (setq-local gptel-backend test-backend))
 
-	  (gptel-copilot-apply-changes test-buffer changes)
+	  (gptel-copilot-apply-code-changes test-buffer changes)
 
 	  (with-current-buffer test-buffer
 	    (should (string= (buffer-string) expected-result)))))))
 
 (provide 'test-gptel-copilot)
+
+;;; test-gptel-copilot ends here
