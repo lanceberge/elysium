@@ -1,5 +1,4 @@
 name: ci
-
 on:
   pull_request:
     branches:
@@ -7,19 +6,15 @@ on:
   push:
     branches:
       - '**'
-
 jobs:
   check:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
-
     - uses: purcell/setup-emacs@master
       with:
         version: 24.4
-
-   - name: Install gptel
+    - name: Install gptel
       run: |
         emacs --batch --eval "
         (require 'package)
@@ -34,7 +29,6 @@ jobs:
         file: gptel-copilot.el
         ignore_warnings: false
         warnings_as_errors: false
-
     - uses: leotaku/elisp-check@master
       with:
         check: ert
