@@ -54,7 +54,8 @@
 (ert-deftest gptel-copilot-apply-changes-multiple-changes ()
   "Test that the offset is properly setup when applying multiple changes"
   (let ((test-buffer (generate-new-buffer "*test-buffer*"))
-	;; Test both newline and no newline after changes
+	(test-backend (gptel--make-backend
+		       :name "test-backend"))
 	((expected-result
 	  (concat "Line 1\n"
 		  "Line 2\n"
@@ -80,6 +81,7 @@
 		  "New Line 11\n"
 		  ">>>>>>> test-backend\n"))
 
+	 ;; Test both newline and no newline after changes
 	 (changes '((:start 3 :end 5 :code "New Line 3\nNew Line 4\n")
 		    (:start 7 :end 10 :code
 			    "New Line 7\nNew Line 8\nNew Line 9\nNew Line 10\nNew Line 11")))
@@ -92,11 +94,4 @@
 	       (gptel-copilot-apply-changes test-buffer changes)
 
 	       (with-current-buffer test-buffer
-		 (should (string= (buffer-string) expected-result))
-		 (should
-		  (string= (gptel-copilot-))))))))))
-
-(ert-deftest gptel-copilot-apply-changes-to-line-1 ()
-  (let ((test-buffer (generate-new-buffer "*test-buffer*"))
-	;; Test both newline and no newline after changes
-	(changes '((:start 1 :end 1 :code "New Line 1"))))))
+		 (should (string= (buffer-string) expected-result)))))))))
