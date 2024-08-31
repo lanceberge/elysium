@@ -149,7 +149,7 @@ Must be a number between 0 and 1, exclusive."
   (interactive
    (list
     (if (eq (current-buffer) gptel-copilot--chat-buffer)
-	nil		; We'll extract the query from the chat buffer
+	nil ; We'll extract the query from the chat buffer
       (read-string "User Query: "))))
   (unless (buffer-live-p gptel-copilot--chat-buffer)
     (gptel-copilot-setup-windows))
@@ -278,12 +278,12 @@ Explanations will be of the format:
 
 (defun gptel-copilot-apply-changes (buffer changes)
   "Apply CHANGES to BUFFER in a git merge format.
-We need to keep track of an offset of line numbers. Because the AI gives us line
- numbers based on the current buffer, all inserted changes will offset those
- line numbers. So if
-we insert a sequence of lines in addition to the >>>>>>>, =======, <<<<<<<
- strings for a change, then the offset of the subsequent inserted lines will
- need to be offset by 3 (number of merge strings) + the length of the newlines"
+We need to keep track of an offset of line numbers.  Because the AI gives us
+line numbers based on the current buffer, all inserted changes will offset
+those line numbers.  So if we insert a sequence of lines in addition to the
+>>>>>>>, =======, <<<<<<< strings for a change, then the offset of the
+subsequent inserted lines will need to be offset by
+3 (number of merge strings) + the length of the newlines"
   (with-current-buffer buffer
     (save-excursion
       (let ((offset 0))
