@@ -21,28 +21,13 @@
 		    "```\n"
 		    "These code changes will run the unit test"))
 
-(setq-local test-lines
-	    (concat "Line 1\n"
-		    "Line 2\n"
-		    "Line 3\n"
-		    "Line 4\n"
-		    "Line 5\n"
-		    "Line 6\n"
-		    "Line 7\n"
-		    "Line 8\n"
-		    "Line 9\n"
-		    "Line 10\n"
-		    "Line 11\n"
-		    "Line 12\n"))
-
 (ert-deftest extract-changes-test ()
   (let* ((response (gptel-copilot-extract-changes example-response))
 	 (explanations (plist-get response :explanations))
 	 (changes (plist-get response :changes)))
     (should (equal changes
 		   '((:start 1 :end 9
-			     :code "package main\nimport \"fmt\"\nfunc main() {\n
-				    fmt.Println(\"hello world\")\n}\n")
+			     :code "package main\nimport \"fmt\"\nfunc main() {\nfmt.Println(\"hello world\")\n}\n")
 		     (:start 10 :end 12
 			     :code "mkdir hello-world\n./hello_world\n"))))
 
@@ -56,6 +41,19 @@
   (let ((test-buffer (generate-new-buffer "*test-buffer*"))
 	(test-backend (gptel--make-backend
 		       :name "test-backend"))
+	(test-lines
+	 (concat "Line 1\n"
+		 "Line 2\n"
+		 "Line 3\n"
+		 "Line 4\n"
+		 "Line 5\n"
+		 "Line 6\n"
+		 "Line 7\n"
+		 "Line 8\n"
+		 "Line 9\n"
+		 "Line 10\n"
+		 "Line 11\n"
+		 "Line 12\n"))
 	(expected-result
 	 (concat "Line 1\n"
 		 "Line 2\n"
@@ -79,7 +77,9 @@
 		 "New Line 9\n"
 		 "New Line 10\n"
 		 "New Line 11\n"
-		 ">>>>>>> test-backend\n"))
+		 ">>>>>>> test-backend\n"
+		 "Line 11\n"
+		 "Line 12\n"))
 
 	;; Test both newline and no newline after changes
 	(changes '((:start 3 :end 5 :code "New Line 3\nNew Line 4\n")
@@ -88,7 +88,7 @@
     (unwind-protect
 	(progn
 	  (with-current-buffer test-buffer
-	    (insert original-content)
+	    (insert test-lines)
 	    (setq-local gptel-backend test-backend))
 
 	  (gptel-copilot-apply-changes test-buffer changes)
