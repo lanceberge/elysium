@@ -6,10 +6,8 @@ on:
   pull_request:
     branches: [ "main" ]
 
-  workflow_dispatch:
-
 jobs:
-  test-melpa:
+  melpa:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -38,7 +36,7 @@ jobs:
           ignore_warnings: ${{ matrix.ignore_warnings }}
           warnings_as_errors: ${{ matrix.warnings_as_errors }}
 
-  test-ert:
+  ert:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
