@@ -4,7 +4,7 @@
 
 ;; Author: Lance Bergeron <bergeron.lance6@gmail.com>
 ;; Version: 0.0.1
-;; Package-Requires: ((emacs "24.4"))
+;; Package-Requires: ((emacs "27.1") (transient "0.4.0") (compat "29.1.4.1"))
 ;; URL: https://github.com/lanceberge/gptel-copilot/
 
 ;; This program is free software; you can redistribute it and/or modify
