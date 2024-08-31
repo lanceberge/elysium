@@ -26,7 +26,6 @@
 (require 'gptel-copilot)
 (require 'ert)
 
-
 (ert-deftest test-extract-changes ()
   (let* ((example-response
 	  (concat "Certainly! Here are some code changes: \n"
