@@ -105,7 +105,6 @@ Must be a number between 0 and 1, exclusive."
 
    "Remember: Accurate line numbers are CRITICAL. The range start_line to end_line must include ALL lines to be replaced, from the very first to the very last. Double-check every range before finalizing your response, paying special attention to the start_line to ensure it hasn't shifted down. Ensure that your line numbers perfectly match the original code structure without any overall shift.\n"))
 
-
 (defun gptel-copilot-toggle-window ()
   "Toggle the copilot chat window."
   (interactive)
@@ -114,7 +113,6 @@ Must be a number between 0 and 1, exclusive."
       (delete-window (get-buffer-window gptel-copilot--chat-buffer))
 
     (gptel-copilot-setup-windows)))
-
 
 (defun gptel-copilot-setup-windows ()
   "Set up the coding assistant layout with the chat window."
@@ -195,8 +193,6 @@ Must be a number between 0 and 1, exclusive."
 	:callback #'gptel-copilot-handle-response)))
   (gptel--update-status " Ready" 'success))
 
-
-;; TODO find out if it shows the first explanation
 (defun gptel-copilot-handle-response (response info)
   "Handle the RESPONSE from the GPTel Copilot.
 The changes will be applied in a git merge format.  INFO is passed into
@@ -209,7 +205,6 @@ this function from the `gptel-request' function."
 	   (changes (plist-get extracted-data :changes))
 	   (explanations (plist-get extracted-data :explanations)))
 
-      ;; Apply changes to code buffer in git merge format
       (when changes
 	(gptel-copilot-apply-code-changes code-buffer changes))
 
@@ -221,9 +216,7 @@ this function from the `gptel-request' function."
 					:in-place t)))
 	    (gptel--insert-response (string-trim explanation) explanation-info)))
 
-	;; Add a message in the chat buffer indicating that changes were applied
 	(gptel--sanitize-model)))))
-
 
 (defun gptel-copilot-extract-changes (response)
   "Extract the code-changes and explanations from RESPONSE.
@@ -259,8 +252,10 @@ Explanations will be of the format:
 		    :end change-end
 		    :code code)
 	      changes)
+
 	;; Update start index in the response string
 	(setq start (match-end 0))))
+
     ;; Add any remaining text as the last explanation
     (let ((remaining-text (substring response start)))
       (when (not (string-empty-p remaining-text))
@@ -272,7 +267,6 @@ Explanations will be of the format:
 	      explanations)))
     (list :explanations (nreverse explanations)
 	  :changes (nreverse changes))))
-
 
 (defun gptel-copilot-apply-code-changes (buffer code-changes)
   "Apply CODE-CHANGES to BUFFER in a git merge format.
@@ -296,13 +290,10 @@ subsequent inserted lines will need to be offset by
 
 	    ;; Skip forward over the previous code
 	    (forward-line (+ 1 (- end start)))
-
 	    (insert (format "=======\n%s\n>>>>>>> %s\n"
 			    new-code
 			    (gptel-backend-name gptel-backend)))
-
 	    (setq offset (+ offset 3 (length new-lines)))))))))
-
 
 ;; TODO this could probably be replaced with something already in gptel
 (defun gptel-copilot-parse-user-query (buffer)
@@ -320,7 +311,6 @@ The query is expected to be after the last '* ' (org-mode) or
 	  (buffer-substring-no-properties
 	   (line-beginning-position 2)  ; Start from next line
 	   (point-max)))))))
-
 
 (defun gptel-copilot--ordinal (n)
   "Convert integer N to its ordinal string representation."
