@@ -40,7 +40,7 @@
 		  "This is a hello world function\n"
 		  "Replace Lines 10-12\n"
 		  "```bash\n"
-		  "mkdir hello-world\n"
+		  "go build hello_world.go\n"
 		  "./hello_world\n"
 		  "```\n"
 		  "These code changes will run the unit test"))
@@ -51,7 +51,7 @@
 		   '((:start 1 :end 9
 			     :code "package main\nimport \"fmt\"\nfunc main() {\nfmt.Println(\"hello world\")\n}\n")
 		     (:start 10 :end 12
-			     :code "mkdir hello-world\n./hello_world\n"))))
+			     :code "go build hello_world.go\n./hello_world\n"))))
 
     (should (equal explanations
 		   '("Certainly! Here are some code changes: \n"
