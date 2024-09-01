@@ -180,18 +180,16 @@ Must be a number between 0 and 1, exclusive."
 			     selected-code
 			     final-user-query)))
 
-    (message (format  "Querying %s..." (gptel-backend-name gptel-backend)))
     (with-current-buffer chat-buffer
-      (goto-char (point-max))
-      (unless in-chat-buffer
-	(insert final-user-query "\n\n"))
       (gptel--update-status " Waiting..." 'warning)
+      (goto-char (point-max))
+      (message (format  "Querying %s..." (gptel-backend-name gptel-backend)))
+      (insert final-user-query "\n")
       (gptel-request
 	  full-query
 	:system gptel-copilot-base-prompt
 	:buffer chat-buffer
-	:callback #'gptel-copilot-handle-response)))
-  (gptel--update-status " Ready" 'success))
+	:callback #'gptel-copilot-handle-response))))
 
 (defun gptel-copilot-handle-response (response info)
   "Handle the RESPONSE from the GPTel Copilot.
@@ -216,7 +214,8 @@ this function from the `gptel-request' function."
 					:in-place t)))
 	    (gptel--insert-response (string-trim explanation) explanation-info)))
 
-	(gptel--sanitize-model)))))
+	(gptel--sanitize-model)
+	(gptel--update-status " Ready" 'success)))))
 
 (defun gptel-copilot-extract-changes (response)
   "Extract the code-changes and explanations from RESPONSE.
