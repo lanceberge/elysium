@@ -183,7 +183,7 @@ Must be a number between 0 and 1, exclusive."
     (with-current-buffer chat-buffer
       (gptel--update-status " Waiting..." 'warning)
       (goto-char (point-max))
-      (message (format  "Querying %s..." (gptel-backend-name gptel-backend)))
+      (message "Querying %s..." (gptel-backend-name gptel-backend))
       (insert final-user-query "\n")
       (gptel-request
 	  full-query
