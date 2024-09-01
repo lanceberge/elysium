@@ -52,4 +52,5 @@ Important functions:
 
 * Planned Features
 
+- Function to implement pseudocode
 - Implementing [[https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching][Prompt Caching]] with Anthropic to let us send more queries before getting rate-limited
