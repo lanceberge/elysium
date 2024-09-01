@@ -1,4 +1,4 @@
-;;; test-gptel-copilot.el --- gptel-copilot tests-*- lexical-binding: t; package-lint-main-file: "../gptel-copilot.el"; -*--*-
+;;; test-gptel-copilot.el --- gptel-copilot tests-*- lexical-binding: t; package-lint-main-file: "../gptel-copilot.el"; -*-
 
 ;; Copyright (C) 2024  Free Software Foundation, Inc.
 
