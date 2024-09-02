@@ -118,7 +118,7 @@ Must be a number between 0 and 1, exclusive."
   "Set up the coding assistant layout with the chat window."
   (unless (buffer-live-p elysium--chat-buffer)
     (setq elysium--chat-buffer
-	  (gptel "*Elysium*")))
+	  (gptel "*elysium*")))
 
   (when elysium-window-style
     (delete-other-windows)
@@ -136,7 +136,6 @@ Must be a number between 0 and 1, exclusive."
       (set-window-buffer main-window main-buffer)
       (other-window 1)
       (set-window-buffer (selected-window) elysium--chat-buffer))))
-
 
 ;; TODO instead of adding user-query to the full-query, it should be added to the
 ;; Chat buffer which is then sent to the request
@@ -190,6 +189,24 @@ Must be a number between 0 and 1, exclusive."
 	:system elysium-base-prompt
 	:buffer chat-buffer
 	:callback #'elysium-handle-response))))
+
+(defun elysium-keep-all-suggested-changes ()
+  "Keep all of the LLM-suggested changes."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (ignore-errors (funcall #'smerge-keep-lower))
+    (while (ignore-errors (not (smerge-next)))
+      (funcall #'smerge-keep-lower))))
+
+(defun elysium-discard-all-suggested-changes ()
+  "Discard all of the LLM-suggested changes."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (ignore-errors (funcall #'smerge-keep-upper))
+    (while (ignore-errors (not (smerge-next)))
+      (funcall #'smerge-keep-upper))))
 
 (defun elysium-handle-response (response info)
   "Handle the RESPONSE from gptel.
@@ -318,7 +335,6 @@ The query is expected to be after the last '* ' (org-mode) or
 	(concat (number-to-string n) "th")
       (concat (number-to-string n)
 	      (nth (mod n 10) suffixes)))))
-
 
 (provide 'elysium)
 
