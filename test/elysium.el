@@ -1,4 +1,4 @@
-;;; test-gptel-copilot.el --- gptel-copilot tests-*- lexical-binding: t; package-lint-main-file: "../gptel-copilot.el"; -*-
+;;; test-elysium.el --- elysium tests-*- lexical-binding: t; package-lint-main-file: "../elysium.el"; -*-
 
 ;; Copyright (C) 2024  Free Software Foundation, Inc.
 
@@ -23,7 +23,7 @@
 ;;
 
 ;;; Code:
-(require 'gptel-copilot)
+(require 'elysium)
 (require 'ert)
 
 (ert-deftest test-extract-changes ()
@@ -44,7 +44,7 @@
 		  "./hello_world\n"
 		  "```\n"
 		  "These code changes will run the unit test"))
-	 (response (gptel-copilot-extract-changes example-response))
+	 (response (elysium-extract-changes example-response))
 	 (explanations (plist-get response :explanations))
 	 (changes (plist-get response :changes)))
     (should (equal changes
@@ -113,11 +113,11 @@
 	    (insert test-lines)
 	    (setq-local gptel-backend test-backend))
 
-	  (gptel-copilot-apply-code-changes test-buffer changes)
+	  (elysium-apply-code-changes test-buffer changes)
 
 	  (with-current-buffer test-buffer
 	    (should (string= (buffer-string) expected-result)))))))
 
-(provide 'test-gptel-copilot)
+(provide 'test-elysium)
 
-;;; test-gptel-copilot ends here
+;;; test-elysium ends here
