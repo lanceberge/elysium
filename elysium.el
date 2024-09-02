@@ -44,7 +44,7 @@ Must be a number between 0 and 1, exclusive."
 	 (if (and (numberp value)
 		  (< 0 value 1))
 	     (set-default symbol value)
-	   (user-error "elysium-window-size must be a number between 0 and 1, exclusive"))))
+	   (user-error "Elysium-window-size must be a number between 0 and 1, exclusive"))))
 
 (defcustom elysium-window-style 'vertical
   "Specify the orientation.  It can be \='horizontal, '\=vertical, or nil."
