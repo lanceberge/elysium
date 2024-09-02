@@ -36,7 +36,7 @@
   :group 'hypermedia)
 
 (defcustom elysium-window-size 0.33
-  "Size of the GPT Copilot chat window as a fraction of the frame.
+  "Size of the elysium chat window as a fraction of the frame.
 Must be a number between 0 and 1, exclusive."
   :type 'float
   :group 'elysium
@@ -44,7 +44,7 @@ Must be a number between 0 and 1, exclusive."
 	 (if (and (numberp value)
 		  (< 0 value 1))
 	     (set-default symbol value)
-	   (user-error "Gptel-copilot-window-size must be a number between 0 and 1, exclusive"))))
+	   (user-error "elysium-window-size must be a number between 0 and 1, exclusive"))))
 
 (defcustom elysium-window-style 'vertical
   "Specify the orientation.  It can be \='horizontal, '\=vertical, or nil."
@@ -106,7 +106,7 @@ Must be a number between 0 and 1, exclusive."
    "Remember: Accurate line numbers are CRITICAL. The range start_line to end_line must include ALL lines to be replaced, from the very first to the very last. Double-check every range before finalizing your response, paying special attention to the start_line to ensure it hasn't shifted down. Ensure that your line numbers perfectly match the original code structure without any overall shift.\n"))
 
 (defun elysium-toggle-window ()
-  "Toggle the copilot chat window."
+  "Toggle the elysium chat window."
   (interactive)
   (if (and (buffer-live-p elysium--chat-buffer)
 	   (get-buffer-window elysium--chat-buffer))
@@ -118,7 +118,7 @@ Must be a number between 0 and 1, exclusive."
   "Set up the coding assistant layout with the chat window."
   (unless (buffer-live-p elysium--chat-buffer)
     (setq elysium--chat-buffer
-	  (gptel "*Gptel Copilot*")))
+	  (gptel "*Elysium*")))
 
   (when elysium-window-style
     (delete-other-windows)
@@ -141,7 +141,7 @@ Must be a number between 0 and 1, exclusive."
 ;; TODO instead of adding user-query to the full-query, it should be added to the
 ;; Chat buffer which is then sent to the request
 (defun elysium-query (user-query)
-  "Send USER-QUERY the GPTel Copilot from the current buffer or chat buffer."
+  "Send USER-QUERY to elysium from the current buffer or chat buffer."
   (interactive
    (list
     (if (eq (current-buffer) elysium--chat-buffer)
@@ -192,7 +192,7 @@ Must be a number between 0 and 1, exclusive."
 	:callback #'elysium-handle-response))))
 
 (defun elysium-handle-response (response info)
-  "Handle the RESPONSE from the GPTel Copilot.
+  "Handle the RESPONSE from gptel.
 The changes will be applied in a git merge format.  INFO is passed into
 this function from the `gptel-request' function."
   (when response
