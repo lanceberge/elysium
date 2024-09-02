@@ -4,7 +4,7 @@
 
 ;; Author: Lance Bergeron <bergeron.lance6@gmail.com>
 ;; Version: 0.0.1
-;; Package-Requires: ((emacs "27.1") (gptel "0.9.0") (smerge))
+;; Package-Requires: ((emacs "27.1") (gptel "0.9.0"))
 ;; URL: https://github.com/lanceberge/elysium/
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -30,6 +30,7 @@
 
 ;;; Code:
 (require 'gptel)
+(require 'smerge-mode)
 
 (defgroup elysium nil
   "Apply code changes using gptel."
