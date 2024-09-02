@@ -191,7 +191,7 @@ Must be a number between 0 and 1, exclusive."
 	:callback #'elysium-handle-response))))
 
 (defun elysium-keep-all-suggested-changes ()
-  "Keep all of the LLM-suggested changes."
+  "Keep all of the LLM-suggestions."
   (interactive)
   (save-excursion
     (goto-char (point-min))
@@ -200,7 +200,7 @@ Must be a number between 0 and 1, exclusive."
       (funcall #'smerge-keep-lower))))
 
 (defun elysium-discard-all-suggested-changes ()
-  "Discard all of the LLM-suggested changes."
+  "Discard all of the LLM-suggestions."
   (interactive)
   (save-excursion
     (goto-char (point-min))
