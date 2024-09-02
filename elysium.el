@@ -1,11 +1,11 @@
-;;; gptel-copilot.el --- Automatically apply LLM-created code-suggestions -*- lexical-binding: t; -*-
+;;; elysium.el --- Automatically apply LLM-created code-suggestions -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2024  Lance Bergeron
 
 ;; Author: Lance Bergeron <bergeron.lance6@gmail.com>
 ;; Version: 0.0.1
 ;; Package-Requires: ((emacs "27.1") (gptel "0.9.0"))
-;; URL: https://github.com/lanceberge/gptel-copilot/
+;; URL: https://github.com/lanceberge/elysium/
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -31,30 +31,30 @@
 ;;; Code:
 (require 'gptel)
 
-(defgroup gptel-copilot nil
+(defgroup elysium nil
   "Apply code changes using gptel."
   :group 'hypermedia)
 
-(defcustom gptel-copilot-window-size 0.33
+(defcustom elysium-window-size 0.33
   "Size of the GPT Copilot chat window as a fraction of the frame.
 Must be a number between 0 and 1, exclusive."
   :type 'float
-  :group 'gptel-copilot
+  :group 'elysium
   :set (lambda (symbol value)
 	 (if (and (numberp value)
 		  (< 0 value 1))
 	     (set-default symbol value)
 	   (user-error "Gptel-copilot-window-size must be a number between 0 and 1, exclusive"))))
 
-(defcustom gptel-copilot-window-style 'vertical
+(defcustom elysium-window-style 'vertical
   "Specify the orientation.  It can be \='horizontal, '\=vertical, or nil."
   :type '(choice (const :tag "Horizontal" horizontal)
 		 (const :tag "Vertical" vertical)
 		 (const :tag "None" nil)))
 
-(defvar gptel-copilot--chat-buffer nil)
+(defvar elysium--chat-buffer nil)
 
-(defvar gptel-copilot-base-prompt
+(defvar elysium-base-prompt
   (concat
    ;; The prompt is originally from avante.nvim:
    ;; https://github.com/yetone/avante.nvim/blob/main/lua/avante/llm.lua
@@ -105,58 +105,58 @@ Must be a number between 0 and 1, exclusive."
 
    "Remember: Accurate line numbers are CRITICAL. The range start_line to end_line must include ALL lines to be replaced, from the very first to the very last. Double-check every range before finalizing your response, paying special attention to the start_line to ensure it hasn't shifted down. Ensure that your line numbers perfectly match the original code structure without any overall shift.\n"))
 
-(defun gptel-copilot-toggle-window ()
+(defun elysium-toggle-window ()
   "Toggle the copilot chat window."
   (interactive)
-  (if (and (buffer-live-p gptel-copilot--chat-buffer)
-	   (get-buffer-window gptel-copilot--chat-buffer))
-      (delete-window (get-buffer-window gptel-copilot--chat-buffer))
+  (if (and (buffer-live-p elysium--chat-buffer)
+	   (get-buffer-window elysium--chat-buffer))
+      (delete-window (get-buffer-window elysium--chat-buffer))
 
-    (gptel-copilot-setup-windows)))
+    (elysium-setup-windows)))
 
-(defun gptel-copilot-setup-windows ()
+(defun elysium-setup-windows ()
   "Set up the coding assistant layout with the chat window."
-  (unless (buffer-live-p gptel-copilot--chat-buffer)
-    (setq gptel-copilot--chat-buffer
+  (unless (buffer-live-p elysium--chat-buffer)
+    (setq elysium--chat-buffer
 	  (gptel "*Gptel Copilot*")))
 
-  (when gptel-copilot-window-style
+  (when elysium-window-style
     (delete-other-windows)
 
     (let* ((main-buffer (current-buffer))
 	   (main-window (selected-window))
-	   (split-size (floor (* (if (eq gptel-copilot-window-style 'vertical)
+	   (split-size (floor (* (if (eq elysium-window-style 'vertical)
 				     (frame-width)
 				   (frame-height))
-				 (- 1 gptel-copilot-window-size)))))
-      (with-current-buffer gptel-copilot--chat-buffer)
-      (if (eq gptel-copilot-window-style 'vertical)
+				 (- 1 elysium-window-size)))))
+      (with-current-buffer elysium--chat-buffer)
+      (if (eq elysium-window-style 'vertical)
 	  (split-window-right split-size)
 	(split-window-below split-size))
       (set-window-buffer main-window main-buffer)
       (other-window 1)
-      (set-window-buffer (selected-window) gptel-copilot--chat-buffer))))
+      (set-window-buffer (selected-window) elysium--chat-buffer))))
 
 
 ;; TODO instead of adding user-query to the full-query, it should be added to the
 ;; Chat buffer which is then sent to the request
-(defun gptel-copilot-query (user-query)
+(defun elysium-query (user-query)
   "Send USER-QUERY the GPTel Copilot from the current buffer or chat buffer."
   (interactive
    (list
-    (if (eq (current-buffer) gptel-copilot--chat-buffer)
+    (if (eq (current-buffer) elysium--chat-buffer)
 	nil ; We'll extract the query from the chat buffer
       (read-string "User Query: "))))
-  (unless (buffer-live-p gptel-copilot--chat-buffer)
-    (gptel-copilot-setup-windows))
-  (let* ((in-chat-buffer (eq (current-buffer) gptel-copilot--chat-buffer))
+  (unless (buffer-live-p elysium--chat-buffer)
+    (elysium-setup-windows))
+  (let* ((in-chat-buffer (eq (current-buffer) elysium--chat-buffer))
 	 (code-buffer (if in-chat-buffer
 			  (window-buffer (next-window))
 			(current-buffer)))
-	 (chat-buffer gptel-copilot--chat-buffer)
+	 (chat-buffer elysium--chat-buffer)
 	 (extracted-query
 	  (when in-chat-buffer
-	    (gptel-copilot-parse-user-query chat-buffer)))
+	    (elysium-parse-user-query chat-buffer)))
 	 (final-user-query (or user-query extracted-query
 			       (user-error "No query provided")))
 	 (start-line (with-current-buffer code-buffer
@@ -187,27 +187,27 @@ Must be a number between 0 and 1, exclusive."
       (insert final-user-query "\n")
       (gptel-request
 	  full-query
-	:system gptel-copilot-base-prompt
+	:system elysium-base-prompt
 	:buffer chat-buffer
-	:callback #'gptel-copilot-handle-response))))
+	:callback #'elysium-handle-response))))
 
-(defun gptel-copilot-handle-response (response info)
+(defun elysium-handle-response (response info)
   "Handle the RESPONSE from the GPTel Copilot.
 The changes will be applied in a git merge format.  INFO is passed into
 this function from the `gptel-request' function."
   (when response
-    (let* ((code-buffer (if (eq (current-buffer) gptel-copilot--chat-buffer)
+    (let* ((code-buffer (if (eq (current-buffer) elysium--chat-buffer)
 			    (window-buffer (next-window))
 			  (current-buffer)))
-	   (extracted-data (gptel-copilot-extract-changes response))
+	   (extracted-data (elysium-extract-changes response))
 	   (changes (plist-get extracted-data :changes))
 	   (explanations (plist-get extracted-data :explanations)))
 
       (when changes
-	(gptel-copilot-apply-code-changes code-buffer changes))
+	(elysium-apply-code-changes code-buffer changes))
 
       ;; Insert explanations into chat buffer
-      (with-current-buffer gptel-copilot--chat-buffer
+      (with-current-buffer elysium--chat-buffer
 	(dolist (explanation explanations)
 	  (let ((explanation-info (list :buffer (plist-get info :buffer)
 					:position (point-max-marker)
@@ -217,7 +217,7 @@ this function from the `gptel-request' function."
 	(gptel--sanitize-model)
 	(gptel--update-status " Ready" 'success)))))
 
-(defun gptel-copilot-extract-changes (response)
+(defun elysium-extract-changes (response)
   "Extract the code-changes and explanations from RESPONSE.
 Explanations will be of the format:
 {Initial explanation}
@@ -243,7 +243,7 @@ Explanations will be of the format:
 	  (push (if (= 0 change-count)
 		    explanation-text  ; For the first explanation, just use the text as is
 		  (format "%s Code Change:\n%s"
-			  (gptel-copilot--ordinal change-count)
+			  (elysium--ordinal change-count)
 			  explanation-text))
 		explanations)
 	  (setq change-count (1+ change-count)))
@@ -261,13 +261,13 @@ Explanations will be of the format:
 	(push (if (= 0 change-count)
 		  remaining-text
 		(format "%s Code Change:\n%s"
-			(gptel-copilot--ordinal change-count)
+			(elysium--ordinal change-count)
 			remaining-text))
 	      explanations)))
     (list :explanations (nreverse explanations)
 	  :changes (nreverse changes))))
 
-(defun gptel-copilot-apply-code-changes (buffer code-changes)
+(defun elysium-apply-code-changes (buffer code-changes)
   "Apply CODE-CHANGES to BUFFER in a git merge format.
 We need to keep track of an offset of line numbers.  Because the AI gives us
 line numbers based on the current buffer, all inserted code-changes will offset
@@ -295,7 +295,7 @@ subsequent inserted lines will need to be offset by
 	    (setq offset (+ offset 3 (length new-lines)))))))))
 
 ;; TODO this could probably be replaced with something already in gptel
-(defun gptel-copilot-parse-user-query (buffer)
+(defun elysium-parse-user-query (buffer)
   "Parse and extract the most recent user query from BUFFER.
 The query is expected to be after the last '* ' (org-mode) or
  '### ' (markdown-mode) heading.  Returns nil if no query is found."
@@ -311,7 +311,7 @@ The query is expected to be after the last '* ' (org-mode) or
 	   (line-beginning-position 2)  ; Start from next line
 	   (point-max)))))))
 
-(defun gptel-copilot--ordinal (n)
+(defun elysium--ordinal (n)
   "Convert integer N to its ordinal string representation."
   (let ((suffixes '("th" "st" "nd" "rd" "th" "th" "th" "th" "th" "th")))
     (if (and (> n 10) (< n 14))
@@ -320,6 +320,6 @@ The query is expected to be after the last '* ' (org-mode) or
 	      (nth (mod n 10) suffixes)))))
 
 
-(provide 'gptel-copilot)
+(provide 'elysium)
 
-;;; gptel-copilot.el ends here
+;;; elysium.el ends here

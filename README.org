@@ -1,19 +1,19 @@
 [[http://www.gnu.org/licenses/gpl-3.0.txt][file:https://img.shields.io/badge/license-GPL_3-green.svg]]
 [[https://img.shields.io/badge/Supports-Emacs_27.1–29.4-blueviolet.svg?style=flat-square&logo=GNU%20Emacs&logoColor=white][file:https://img.shields.io/badge/Supports-Emacs_27.1–29.4-blueviolet.svg?style=flat-square&logo=GNU%20Emacs&logoColor=white]]
-[[https://github.com/lanceberge/gptel-copilot/actions][file:https://github.com/lanceberge/gptel-copilot/actions/workflows/ci.yml/badge.svg]]
+[[https://github.com/lanceberge/elysium/actions][file:https://github.com/lanceberge/elysium/actions/workflows/ci.yml/badge.svg]]
 
-* gptel-copilot
+* elysium
 
-  This package lets you automatically apply AI-generated changes as you code. Call M-x =gptel-copilot-query=
+  This package lets you automatically apply AI-generated changes as you code. Call M-x =elysium-query=
   and request a set of changes, and they will be applied to your code buffer as a merge.
 
 * Installation
 
 #+BEGIN_SRC emacs-lisp :results none
-(use-package gptel-copilot
+(use-package elysium
   :straight
   ;; TODO bind-key
-  (:host github :repo "lanceberge/gptel-copilot" :branch "main" :files ("*.el")))
+  (:host github :repo "lanceberge/elysium" :branch "main" :files ("*.el")))
 
 (use-package gptel
   :custom
@@ -43,12 +43,12 @@ Use =smerge-mode= to then merge in the changes
 Important functions:
 
 | =smerge-next=       | go to the next conflicting hunk        |
-| =smerge-keep-other= | keep the changes from =gptel-copilot=    |
-| =smerge-keep-mine=  | discard the changes from =gptel-copilot= |
+| =smerge-keep-other= | keep the changes from =elysium=    |
+| =smerge-keep-mine=  | discard the changes from =elysium= |
 
 * Notes
 
-  =gptel-copilot= uses [[https://github.com/karthink/gptel][gptel]] as a backend. It supports any of the models supported by =gptel=, but currently
+  =elysium= uses [[https://github.com/karthink/gptel][gptel]] as a backend. It supports any of the models supported by =gptel=, but currently
   Claude 3-5 Sonnet seems to be the best for generating code.
 
 * Planned Features

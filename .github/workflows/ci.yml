@@ -22,7 +22,7 @@ jobs:
         check:
           - melpa
         file:
-          - gptel-copilot.el
+          - elysium.el
 
     steps:
       - uses: actions/checkout@v4
@@ -52,7 +52,7 @@ jobs:
         check:
           - ert
         file:
-          - test/test-gptel-copilot.el
+          - test/test-elysium.el
 
     steps:
       - uses: actions/checkout@v4
