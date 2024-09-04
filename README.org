@@ -1,10 +1,14 @@
-[[http://www.gnu.org/licenses/gpl-3.0.txt][file:https://img.shields.io/badge/license-GPL_3-green.svg]]
-[[https://img.shields.io/badge/Supports-Emacs_27.1–29.4-blueviolet.svg?style=flat-square&logo=GNU%20Emacs&logoColor=white][file:https://img.shields.io/badge/Supports-Emacs_27.1–29.4-blueviolet.svg?style=flat-square&logo=GNU%20Emacs&logoColor=white]]
-[[https://github.com/lanceberge/elysium/actions][file:https://github.com/lanceberge/elysium/actions/workflows/ci.yml/badge.svg]]
+#+BEGIN_HTML
+<p align="center">
+  <img src="https://img.shields.io/badge/license-GPL_3-green.svg" />
+  <img src="https://img.shields.io/badge/Supports-Emacs_27.1–29.4-blueviolet.svg?style=flat-square&logo=GNU%20Emacs&logoColor=white" />
+  <img src="https://github.com/lanceberge/elysium/actions/workflows/ci.yml/badge.svg" />
+</p>
+#+END_HTML
 
 * elysium
 
-#+html: <p align="center"><img src="image/minotaur.png" width=300px /></p>
+#+HTML: <p align="center"><img src="image/minotaur.png" width=300px /></p>
 
   This package lets you automatically apply AI-generated changes as you code. Call M-x =elysium-query=
   and request a set of changes, and they will be applied to your code buffer as a merge.
@@ -53,11 +57,11 @@ Use =smerge-mode= to then merge in the changes
 | =smerge-next=                           | go to the next conflicting hunk         |
 | =smerge-keep-other=                     | keep this set of changes                |
 | =smerge-keep-mine=                      | discard this set of changes             |
-| =elysium-toggle-window=                 | toggle the chat window            |
+| =elysium-toggle-window=                 | toggle the chat window                  |
 
 * Notes
 
-  =elysium= uses [[https://github.com/karthink/gptel][gptel]] as a backend. It supports any of the models supported by =gptel=, but currently
+  =elysium= uses [[https://github.com/karthink/gptel][gptel]] as a backend. It supports any of the models supported by =gptel=, but currently (9/24)
   Claude 3-5 Sonnet seems to be the best for generating code.
 
   If there is a region active, then =elysium= will send only that region to the LLM. Otherwise, the entire code buffer will be sent. If you're using =Claude=, then I recommend only ever sending a region to avoid getting rate-limited.
