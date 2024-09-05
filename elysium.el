@@ -42,16 +42,16 @@ Must be a number between 0 and 1, exclusive."
   :type 'float
   :group 'elysium
   :set (lambda (symbol value)
-	 (if (and (numberp value)
-		  (< 0 value 1))
-	     (set-default symbol value)
-	   (user-error "Elysium-window-size must be a number between 0 and 1, exclusive"))))
+         (if (and (numberp value)
+                  (< 0 value 1))
+             (set-default symbol value)
+           (user-error "Elysium-window-size must be a number between 0 and 1, exclusive"))))
 
 (defcustom elysium-window-style 'vertical
   "Specify the orientation.  It can be \='horizontal, '\=vertical, or nil."
   :type '(choice (const :tag "Horizontal" horizontal)
-		 (const :tag "Vertical" vertical)
-		 (const :tag "None" nil)))
+                 (const :tag "Vertical" vertical)
+                 (const :tag "None" nil)))
 
 (defvar elysium--chat-buffer nil)
 
@@ -110,7 +110,7 @@ Must be a number between 0 and 1, exclusive."
   "Toggle the elysium chat window."
   (interactive)
   (if (and (buffer-live-p elysium--chat-buffer)
-	   (get-buffer-window elysium--chat-buffer))
+           (get-buffer-window elysium--chat-buffer))
       (delete-window (get-buffer-window elysium--chat-buffer))
 
     (elysium-setup-windows)))
@@ -119,21 +119,21 @@ Must be a number between 0 and 1, exclusive."
   "Set up the coding assistant layout with the chat window."
   (unless (buffer-live-p elysium--chat-buffer)
     (setq elysium--chat-buffer
-	  (gptel "*elysium*")))
+          (gptel "*elysium*")))
 
   (when elysium-window-style
     (delete-other-windows)
 
     (let* ((main-buffer (current-buffer))
-	   (main-window (selected-window))
-	   (split-size (floor (* (if (eq elysium-window-style 'vertical)
-				     (frame-width)
-				   (frame-height))
-				 (- 1 elysium-window-size)))))
+           (main-window (selected-window))
+           (split-size (floor (* (if (eq elysium-window-style 'vertical)
+                                     (frame-width)
+                                   (frame-height))
+                                 (- 1 elysium-window-size)))))
       (with-current-buffer elysium--chat-buffer)
       (if (eq elysium-window-style 'vertical)
-	  (split-window-right split-size)
-	(split-window-below split-size))
+          (split-window-right split-size)
+        (split-window-below split-size))
       (set-window-buffer main-window main-buffer)
       (other-window 1)
       (set-window-buffer (selected-window) elysium--chat-buffer))))
@@ -145,52 +145,52 @@ Must be a number between 0 and 1, exclusive."
   (interactive
    (list
     (if (eq (current-buffer) elysium--chat-buffer)
-	nil ; We'll extract the query from the chat buffer
+        nil ; We'll extract the query from the chat buffer
       (read-string "User Query: "))))
   (unless (buffer-live-p elysium--chat-buffer)
     (elysium-setup-windows))
   (let* ((in-chat-buffer (eq (current-buffer) elysium--chat-buffer))
-	 (code-buffer (if in-chat-buffer
-			  (window-buffer (next-window))
-			(current-buffer)))
-	 (chat-buffer elysium--chat-buffer)
-	 (extracted-query
-	  (when in-chat-buffer
-	    (elysium-parse-user-query chat-buffer)))
-	 (final-user-query (or user-query extracted-query
-			       (user-error "No query provided")))
-	 (start-line (with-current-buffer code-buffer
-		       (if (use-region-p)
-			   (line-number-at-pos (region-beginning))
-			 1)))
-	 (end-line (with-current-buffer code-buffer
-		     (if (use-region-p)
-			 (line-number-at-pos (region-end))
-		       (line-number-at-pos (point-max)))))
-	 (selected-code (with-current-buffer code-buffer
-			  (if (use-region-p)
-			      (buffer-substring-no-properties (region-beginning) (region-end))
-			    (buffer-substring-no-properties (point-min) (point-max)))))
-	 (file-type (with-current-buffer code-buffer
-		      (symbol-name major-mode)))
-	 (full-query (format "\n\nFile type: %s\nLine range: %d-%d\n\nCode:\n%s\n\n%s"
-			     file-type
-			     start-line
-			     end-line
-			     selected-code
-			     final-user-query)))
+         (code-buffer (if in-chat-buffer
+                          (window-buffer (next-window))
+                        (current-buffer)))
+         (chat-buffer elysium--chat-buffer)
+         (extracted-query
+          (when in-chat-buffer
+            (elysium-parse-user-query chat-buffer)))
+         (final-user-query (or user-query extracted-query
+                               (user-error "No query provided")))
+         (start-line (with-current-buffer code-buffer
+                       (if (use-region-p)
+                           (line-number-at-pos (region-beginning))
+                         1)))
+         (end-line (with-current-buffer code-buffer
+                     (if (use-region-p)
+                         (line-number-at-pos (region-end))
+                       (line-number-at-pos (point-max)))))
+         (selected-code (with-current-buffer code-buffer
+                          (if (use-region-p)
+                              (buffer-substring-no-properties (region-beginning) (region-end))
+                            (buffer-substring-no-properties (point-min) (point-max)))))
+         (file-type (with-current-buffer code-buffer
+                      (symbol-name major-mode)))
+         (full-query (format "\n\nFile type: %s\nLine range: %d-%d\n\nCode:\n%s\n\n%s"
+                             file-type
+                             start-line
+                             end-line
+                             selected-code
+                             final-user-query)))
 
     (save-excursion
       (with-current-buffer chat-buffer
-	(gptel--update-status " Waiting..." 'warning)
-	(goto-char (point-max))
-	(message "Querying %s..." (gptel-backend-name gptel-backend))
-	(insert final-user-query "\n")
-	(gptel-request
-	    full-query
-	  :system elysium-base-prompt
-	  :buffer chat-buffer
-	  :callback #'elysium-handle-response)))))
+        (gptel--update-status " Waiting..." 'warning)
+        (goto-char (point-max))
+        (message "Querying %s..." (gptel-backend-name gptel-backend))
+        (insert final-user-query "\n")
+        (gptel-request
+         full-query
+         :system elysium-base-prompt
+         :buffer chat-buffer
+         :callback #'elysium-handle-response)))))
 
 (defun elysium-keep-all-suggested-changes ()
   "Keep all of the LLM suggestions."
@@ -216,25 +216,25 @@ The changes will be applied in a git merge format.  INFO is passed into
 this function from the `gptel-request' function."
   (when response
     (let* ((code-buffer (if (eq (current-buffer) elysium--chat-buffer)
-			    (window-buffer (next-window))
-			  (current-buffer)))
-	   (extracted-data (elysium-extract-changes response))
-	   (changes (plist-get extracted-data :changes))
-	   (explanations (plist-get extracted-data :explanations)))
+                            (window-buffer (next-window))
+                          (current-buffer)))
+           (extracted-data (elysium-extract-changes response))
+           (changes (plist-get extracted-data :changes))
+           (explanations (plist-get extracted-data :explanations)))
 
       (when changes
-	(elysium-apply-code-changes code-buffer changes))
+        (elysium-apply-code-changes code-buffer changes))
 
       ;; Insert explanations into chat buffer
       (with-current-buffer elysium--chat-buffer
-	(dolist (explanation explanations)
-	  (let ((explanation-info (list :buffer (plist-get info :buffer)
-					:position (point-max-marker)
-					:in-place t)))
-	    (gptel--insert-response (string-trim explanation) explanation-info)))
+        (dolist (explanation explanations)
+          (let ((explanation-info (list :buffer (plist-get info :buffer)
+                                        :position (point-max-marker)
+                                        :in-place t)))
+            (gptel--insert-response (string-trim explanation) explanation-info)))
 
-	(gptel--sanitize-model)
-	(gptel--update-status " Ready" 'success)))))
+        (gptel--sanitize-model)
+        (gptel--update-status " Ready" 'success)))))
 
 (defun elysium-extract-changes (response)
   "Extract the code-changes and explanations from RESPONSE.
@@ -247,44 +247,44 @@ Explanations will be of the format:
 2nd Code Change:
 {Code Change}"
   (let ((changes '())
-	(explanations '())
-	(start 0)
-	(change-count 0)
-	(code-block-regex
-	 "Replace [Ll]ines:? \\([0-9]+\\)-\\([0-9]+\\)\n```\\(?:[[:alpha:]-]+\\)?\n\\(\\(?:.\\|\n\\)*?\\)```"))
+        (explanations '())
+        (start 0)
+        (change-count 0)
+        (code-block-regex
+         "Replace [Ll]ines:? \\([0-9]+\\)-\\([0-9]+\\)\n```\\(?:[[:alpha:]-]+\\)?\n\\(\\(?:.\\|\n\\)*?\\)```"))
     (while (string-match code-block-regex response start)
       (let ((change-start (string-to-number (match-string 1 response)))
-	    (change-end (string-to-number (match-string 2 response)))
-	    (code (match-string 3 response))
-	    (explanation-text (substring response start (match-beginning 0))))
-	;; the initial explanation won't be preceded by nth Code Change
-	(when (not (string-empty-p explanation-text))
-	  (push (if (= 0 change-count)
-		    explanation-text  ; For the first explanation, just use the text as is
-		  (format "%s Code Change:\n%s"
-			  (elysium--ordinal change-count)
-			  explanation-text))
-		explanations)
-	  (setq change-count (1+ change-count)))
-	(push (list :start change-start
-		    :end change-end
-		    :code code)
-	      changes)
+            (change-end (string-to-number (match-string 2 response)))
+            (code (match-string 3 response))
+            (explanation-text (substring response start (match-beginning 0))))
+        ;; the initial explanation won't be preceded by nth Code Change
+        (when (not (string-empty-p explanation-text))
+          (push (if (= 0 change-count)
+                    explanation-text  ; For the first explanation, just use the text as is
+                  (format "%s Code Change:\n%s"
+                          (elysium--ordinal change-count)
+                          explanation-text))
+                explanations)
+          (setq change-count (1+ change-count)))
+        (push (list :start change-start
+                    :end change-end
+                    :code code)
+              changes)
 
-	;; Update start index in the response string
-	(setq start (match-end 0))))
+        ;; Update start index in the response string
+        (setq start (match-end 0))))
 
     ;; Add any remaining text as the last explanation
     (let ((remaining-text (substring response start)))
       (when (not (string-empty-p remaining-text))
-	(push (if (= 0 change-count)
-		  remaining-text
-		(format "%s Code Change:\n%s"
-			(elysium--ordinal change-count)
-			remaining-text))
-	      explanations)))
+        (push (if (= 0 change-count)
+                  remaining-text
+                (format "%s Code Change:\n%s"
+                        (elysium--ordinal change-count)
+                        remaining-text))
+              explanations)))
     (list :explanations (nreverse explanations)
-	  :changes (nreverse changes))))
+          :changes (nreverse changes))))
 
 (defun elysium-apply-code-changes (buffer code-changes)
   "Apply CODE-CHANGES to BUFFER in a git merge format.
@@ -297,21 +297,21 @@ subsequent inserted lines will need to be offset by
   (with-current-buffer buffer
     (save-excursion
       (let ((offset 0))
-	(dolist (change code-changes)
-	  (let* ((start (plist-get change :start))
-		 (end (plist-get change :end))
-		 (new-code (string-trim-right (plist-get change :code)))
-		 (new-lines (split-string new-code "\n" t)))
-	    (goto-char (point-min))
-	    (forward-line (1- (+ start offset)))
-	    (insert "<<<<<<< HEAD\n")
+        (dolist (change code-changes)
+          (let* ((start (plist-get change :start))
+                 (end (plist-get change :end))
+                 (new-code (string-trim-right (plist-get change :code)))
+                 (new-lines (split-string new-code "\n" t)))
+            (goto-char (point-min))
+            (forward-line (1- (+ start offset)))
+            (insert "<<<<<<< HEAD\n")
 
-	    ;; Skip forward over the previous code
-	    (forward-line (+ 1 (- end start)))
-	    (insert (format "=======\n%s\n>>>>>>> %s\n"
-			    new-code
-			    (gptel-backend-name gptel-backend)))
-	    (setq offset (+ offset 3 (length new-lines)))))))))
+            ;; Skip forward over the previous code
+            (forward-line (+ 1 (- end start)))
+            (insert (format "=======\n%s\n>>>>>>> %s\n"
+                            new-code
+                            (gptel-backend-name gptel-backend)))
+            (setq offset (+ offset 3 (length new-lines)))))))))
 
 ;; TODO this could probably be replaced with something already in gptel
 (defun elysium-parse-user-query (buffer)
@@ -322,21 +322,21 @@ The query is expected to be after the last '* ' (org-mode) or
     (save-excursion
       (goto-char (point-max))
       (let ((case-fold-search t)
-	    (heading-regex (if (derived-mode-p 'org-mode)
-			       "^\\* "
-			     "^### ")))
-	(when (re-search-backward heading-regex nil t)
-	  (buffer-substring-no-properties
-	   (line-beginning-position 2)  ; Start from next line
-	   (point-max)))))))
+            (heading-regex (if (derived-mode-p 'org-mode)
+                               "^\\* "
+                             "^### ")))
+        (when (re-search-backward heading-regex nil t)
+          (buffer-substring-no-properties
+           (line-beginning-position 2)  ; Start from next line
+           (point-max)))))))
 
 (defun elysium--ordinal (n)
   "Convert integer N to its ordinal string representation."
   (let ((suffixes '("th" "st" "nd" "rd" "th" "th" "th" "th" "th" "th")))
     (if (and (> n 10) (< n 14))
-	(concat (number-to-string n) "th")
+        (concat (number-to-string n) "th")
       (concat (number-to-string n)
-	      (nth (mod n 10) suffixes)))))
+              (nth (mod n 10) suffixes)))))
 
 (provide 'elysium)
 
