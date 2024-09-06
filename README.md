@@ -1,21 +1,19 @@
-#+BEGIN_HTML
 <p align="center">
   <img src="https://img.shields.io/badge/license-GPL_3-green.svg" />
   <img src="https://img.shields.io/badge/Supports-Emacs_27.1–29.4-blueviolet.svg?style=flat-square&logo=GNU%20Emacs&logoColor=white" />
   <img src="https://github.com/lanceberge/elysium/actions/workflows/ci.yml/badge.svg" />
 </p>
-#+END_HTML
 
-* elysium
+# elysium
 
-#+HTML: <p align="center"><img src="image/minotaur.png" width=300px /></p>
+<p align="center"><img src="image/minotaur.png" width=300px /></p>
 
   This package lets you automatically apply AI-generated changes as you code. Call M-x =elysium-query=
   and request a set of changes, and they will be applied to your code buffer as a merge.
 
-* Installation and Customization
+## Installation and Customization
 
-#+BEGIN_SRC emacs-lisp :results none
+```emacs-lisp
 (use-package elysium
   :straight
   ;; TODO bind-key
@@ -40,16 +38,16 @@
    gptel-backend (gptel-make-anthropic "Claude"
                    :stream t
                    :key #'gptel-api-key)))
-#+END_SRC
+```
 
 Use =smerge-mode= to then merge in the changes
 
-#+BEGIN_SRC emacs-lisp :results none
+```emacs-lisp
 (use-package smerge-mode
   :ensure nil
   :hook
   (prog-mode . smerge-mode))
-#+END_SRC
+```
 
 ** Functions to know:
 
