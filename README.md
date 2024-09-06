@@ -93,8 +93,9 @@ Use `smerge-mode` to then merge in the changes
 | `elysium-query`                         | send a query to the `gptel` backend     |
 | `elysium-keep-all-suggested-changes`    | keep all of the AI-suggested changes    |
 | `elysium-discard-all-suggested-changes` | discard all of the AI-suggested changes |
-| `smerge-keep-other`                     | keep this set of changes                |
 | `smerge-next`                           | go to the next conflicting hunk         |
+| `smerge-previous`                       | go to the next conflicting hunk         |
+| `smerge-keep-other`                     | keep this set of changes                |
 | `smerge-keep-mine`                      | discard this set of changes             |
 | `elysium-toggle-window`                 | toggle the chat window                  |
 

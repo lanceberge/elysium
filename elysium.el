@@ -186,11 +186,10 @@ Must be a number between 0 and 1, exclusive."
         (goto-char (point-max))
         (message "Querying %s..." (gptel-backend-name gptel-backend))
         (insert final-user-query "\n")
-        (gptel-request
-         full-query
-         :system elysium-base-prompt
-         :buffer chat-buffer
-         :callback #'elysium-handle-response)))))
+        (gptel-request full-query
+          :system elysium-base-prompt
+          :buffer chat-buffer
+          :callback #'elysium-handle-response)))))
 
 (defun elysium-keep-all-suggested-changes ()
   "Keep all of the LLM suggestions."
@@ -323,7 +322,7 @@ The query is expected to be after the last '* ' (org-mode) or
       (goto-char (point-max))
       (let ((case-fold-search t)
             (heading-regex (if (derived-mode-p 'org-mode)
-                               "^\\* "
+                               "^\\*+"
                              "^### ")))
         (when (re-search-backward heading-regex nil t)
           (buffer-substring-no-properties
