@@ -17,25 +17,45 @@
 
 *** Using =straight.el=
 
-#+BEGIN_SRC emacs-lisp :results none
+#+BEGIN_HTML
+<details><summary>Toggle</summary>
+
+  #+BEGIN_SRC emacs-lisp :results none
 (use-package elysium
   :straight
-  (:host github :repo "lanceberge/elysium" :branch "main" :files ("*.el"))
-#+END_SRC
+  (:host github :repo "lanceberge/elysium" :branch "main" :files ("*.el")
+  ...)
+  #+END_SRC
+
+</details>
+#+END_HTML
 
 *** Using =elpaca=
 
-#+BEGIN_SRC emacs-lisp :results none
+#+BEGIN_HTML
+<details><summary>Toggle</summary>
+
+  #+BEGIN_SRC emacs-lisp :results none
 (use-package elysium
-  :ensure (:host github :repo "lanceberge/elysium"))
-#+END_SRC
+  :ensure (:host github :repo "lanceberge/elysium")
+  ...)
+  #+END_SRC
+
+</details>
+#+END_HTML
 
 *** Using =package.el=
 
-      #+BEGIN_SRC emacs-lisp :results none
+ #+BEGIN_HTML
+<details><summary>Toggle</summary>
+  #+BEGIN_SRC emacs-lisp :results none
 (use-package elysium
-  :vc (:fetcher github :repo lanceberge/elysium))
-      #+END_SRC
+  :vc (:fetcher github :repo lanceberge/elysium)
+  ...)
+  #+END_SRC
+
+</details>
+#+END_HTML
 
 * Customization
 
