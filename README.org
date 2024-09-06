@@ -15,7 +15,7 @@
 
 * Installation
 
-***** Using =straight.el=
+*** Using =straight.el=
 
 #+BEGIN_SRC emacs-lisp :results none
 (use-package elysium
@@ -23,12 +23,19 @@
   (:host github :repo "lanceberge/elysium" :branch "main" :files ("*.el"))
 #+END_SRC
 
-***** Using =elpaca=
+*** Using =elpaca=
 
 #+BEGIN_SRC emacs-lisp :results none
 (use-package elysium
   :ensure (:host github :repo "lanceberge/elysium"))
 #+END_SRC
+
+*** Using =package.el=
+
+      #+BEGIN_SRC emacs-lisp :results none
+(use-package elysium
+  :vc (:fetcher github :repo lanceberge/elysium))
+      #+END_SRC
 
 * Customization
 
