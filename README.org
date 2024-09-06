@@ -38,8 +38,8 @@
     (read-file-contents "~/secrets/claude_key"))
   (setq
    gptel-backend (gptel-make-anthropic "Claude"
-		   :stream t
-		   :key #'gptel-api-key)))
+                   :stream t
+                   :key #'gptel-api-key)))
 #+END_SRC
 
 Use =smerge-mode= to then merge in the changes
@@ -47,7 +47,8 @@ Use =smerge-mode= to then merge in the changes
 #+BEGIN_SRC emacs-lisp :results none
 (use-package smerge-mode
   :ensure nil
-  :hook (prog-mode . smerge-mode))
+  :hook
+  (prog-mode . smerge-mode))
 #+END_SRC
 
 ** Functions to know:
