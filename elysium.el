@@ -322,12 +322,11 @@ The query is expected to be after the last '* ' (org-mode) or
       (goto-char (point-max))
       (let ((case-fold-search t)
             (heading-regex (if (derived-mode-p 'org-mode)
-                               "^\\*+"
+                               "^\\*\\*\\* "
                              "^### ")))
         (when (re-search-backward heading-regex nil t)
-          (buffer-substring-no-properties
-           (line-beginning-position 2)  ; Start from next line
-           (point-max)))))))
+          (let ((query-text (buffer-substring-no-properties (point) (point-max))))
+            (string-trim query-text)))))))
 
 (defun elysium--ordinal (n)
   "Convert integer N to its ordinal string representation."
