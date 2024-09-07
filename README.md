@@ -12,6 +12,8 @@
   This package lets you automatically apply AI-generated changes as you code. Call M-x `elysium-query`
   and request a set of changes, and they will be applied to your code buffer as a merge.
 
+![]('image/demo.gif')
+
 # Installation
 
 ### Using `straight.el`
