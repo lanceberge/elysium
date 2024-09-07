@@ -14,6 +14,10 @@
 
 ![](./image/demo.gif)
 
+You can make queries on a region without leaving the the code buffer
+
+![](./image/demo2.gif)
+
 # Installation
 
 ### Using `straight.el`
