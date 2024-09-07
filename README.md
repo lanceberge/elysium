@@ -10,7 +10,7 @@
 <p align="center"><img src="image/minotaur.png" width=300px /></p>
 
   This package lets you automatically apply AI-generated changes as you code. Call M-x `elysium-query`
-  and request a set of changes, and they will be applied to your code buffer as a merge.
+  and request a set of changes. They will automatically be merged into your code buffer.
 
 ![](./image/demo.gif)
 
