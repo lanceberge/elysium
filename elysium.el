@@ -180,16 +180,19 @@ Must be a number between 0 and 1, exclusive."
                              selected-code
                              final-user-query)))
 
+    (gptel--update-status " Waiting..." 'warning)
+    (message "Querying %s..." (gptel-backend-name gptel-backend))
     (save-excursion
       (with-current-buffer chat-buffer
-        (gptel--update-status " Waiting..." 'warning)
         (goto-char (point-max))
-        (message "Querying %s..." (gptel-backend-name gptel-backend))
-        (insert final-user-query "\n")
-        (gptel-request full-query
-          :system elysium-base-prompt
-          :buffer chat-buffer
-          :callback #'elysium-handle-response)))))
+        (unless in-chat-buffer
+          (insert final-user-query))
+        (insert "\n\n")))
+
+    (gptel-request full-query
+      :system elysium-base-prompt
+      :buffer chat-buffer
+      :callback #'elysium-handle-response)))
 
 (defun elysium-keep-all-suggested-changes ()
   "Keep all of the LLM suggestions."
