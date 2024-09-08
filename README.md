@@ -36,6 +36,17 @@ You can make queries on a region without leaving the the code buffer
 
 </details>
 
+### Using `doom-emacs`
+
+<details><summary>Toggle</summary>
+
+```emacs-lisp
+(package! elysium
+  :recipe (:type git :host github :repo "lanceberge/elysium" :branch "main" :files ("*.el")))
+```
+
+</details>
+
 ### Using `elpaca`
 
 <details><summary>Toggle</summary>
