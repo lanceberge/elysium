@@ -1,15 +1,15 @@
 <div align="center">
-  <img src="https://img.shields.io/badge/license-GPL_3-green.svg" />
+  <a href="https://github.com/lanceberge/elysium/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-GPL_3-green.svg" /></a>
   <img src="https://img.shields.io/badge/Supports-Emacs_27.1–29.4-blueviolet.svg?style`flat-square&logo`GNU%20Emacs&logoColor`white" />
-  <img src="https://github.com/lanceberge/elysium/actions/workflows/ci.yml/badge.svg" />
+  <a href="https://melpa.org/#/elysium"><img alt="MELPA" src="https://melpa.org/packages/elysium-badge.svg"/></a>
+  <a href="https://github.com/lanceberge/elysium/actions"><img src="https://github.com/lanceberge/elysium/actions/workflows/ci.yml/badge.svg" /></a>
 
 # elysium
 
 </div>
 
-  This package lets you automatically apply AI-generated changes as you code. Call M-x `elysium-query`
-  and request a set of changes. They will automatically be merged into your code buffer.
-
+This package lets you automatically apply AI-generated changes as you code. Call M-x `elysium-query`
+and request a set of changes. They will automatically be merged into your code buffer.
 
 https://github.com/user-attachments/assets/275e292e-c480-48d1-9a13-27664c0bbf12
 
@@ -23,54 +23,14 @@ You can make queries on a region without leaving the the code buffer
 
 # Installation
 
-### Using `straight.el`
-
-<details><summary>Toggle</summary>
+Elysium is now on Melpa!
 
 ```emacs-lisp
-(use-package elysium
-  :straight
-  (:host github :repo "lanceberge/elysium" :branch "main" :files ("*.el")
-  ...)
+(add-to-list 'package-archives
+             '("melpa-stable" . "https://stable.melpa.org/packages/") t)
+
+(use-package elysium)
 ```
-
-</details>
-
-### Using `elpaca`
-
-<details><summary>Toggle</summary>
-
-```emacs-lisp
-(use-package elysium
-  :ensure (:host github :repo "lanceberge/elysium")
-  ...)
-```
-
-</details>
-
-### Using `doom-emacs`
-
-<details><summary>Toggle</summary>
-
-```emacs-lisp
-(package! elysium
-  :recipe (:type git :host github :repo "lanceberge/elysium" :branch "main" :files ("*.el"))
-  ...)
-```
-
-</details>
-
-### Using `package.el`
-
-<details><summary>Toggle</summary>
-
-```emacs-lisp
-(use-package elysium
-  :vc (:fetcher github :repo lanceberge/elysium)
-  ...)
-```
-
-</details>
 
 # Customization
 
@@ -122,10 +82,10 @@ Use `smerge-mode` to then merge in the changes
 
 # Notes
 
-  `elysium` uses [gptel](https://github.com/karthink/gptel) as a backend. It supports any of the models supported by `gptel`, but currently (9/24)
-  Claude 3-5 Sonnet seems to be the best for generating code.
+`elysium` uses [gptel](https://github.com/karthink/gptel) as a backend. It supports any of the models supported by `gptel`, but currently (9/24)
+Claude 3-5 Sonnet seems to be the best for generating code.
 
-  If there is a region active, then `elysium` will send only that region to the LLM. Otherwise, the entire code buffer will be sent. If you're using `Claude`, then I recommend only ever sending a region to avoid getting rate-limited.
+If there is a region active, then `elysium` will send only that region to the LLM. Otherwise, the entire code buffer will be sent. If you're using `Claude`, then I recommend only ever sending a region to avoid getting rate-limited.
 
 # Planned Features
 
