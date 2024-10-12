@@ -192,7 +192,7 @@ Must be a number between 0 and 1, exclusive."
     (gptel-request full-query
       :system elysium-base-prompt
       :buffer chat-buffer
-      :callback #'elysium-handle-response)))
+      :callback (apply-partially #'elysium-handle-response code-buffer))))
 
 (defun elysium-keep-all-suggested-changes ()
   "Keep all of the LLM suggestions."
@@ -212,15 +212,12 @@ Must be a number between 0 and 1, exclusive."
     (while (ignore-errors (not (smerge-next)))
       (funcall #'smerge-keep-upper))))
 
-(defun elysium-handle-response (response info)
+(defun elysium-handle-response (code-buffer response info)
   "Handle the RESPONSE from gptel.
 The changes will be applied in a git merge format.  INFO is passed into
 this function from the `gptel-request' function."
   (when response
-    (let* ((code-buffer (if (eq (current-buffer) elysium--chat-buffer)
-                            (window-buffer (next-window))
-                          (current-buffer)))
-           (extracted-data (elysium-extract-changes response))
+    (let* ((extracted-data (elysium-extract-changes response))
            (changes (plist-get extracted-data :changes))
            (explanations (plist-get extracted-data :explanations)))
 
