@@ -138,8 +138,6 @@ Must be a number between 0 and 1, exclusive."
       (other-window 1)
       (set-window-buffer (selected-window) elysium--chat-buffer))))
 
-;; TODO instead of adding user-query to the full-query, it should be added to the
-;; Chat buffer which is then sent to the request
 (defun elysium-query (user-query)
   "Send USER-QUERY to elysium from the current buffer or chat buffer."
   (interactive
@@ -190,32 +188,14 @@ Must be a number between 0 and 1, exclusive."
         (insert "\n\n")))
 
     (gptel-request full-query
-      :system elysium-base-prompt
-      :buffer chat-buffer
-      :callback (apply-partially #'elysium-handle-response code-buffer))))
-
-(defun elysium-keep-all-suggested-changes ()
-  "Keep all of the LLM suggestions."
-  (interactive)
-  (save-excursion
-    (goto-char (point-min))
-    (ignore-errors (funcall #'smerge-keep-lower))
-    (while (ignore-errors (not (smerge-next)))
-      (funcall #'smerge-keep-lower))))
-
-(defun elysium-discard-all-suggested-changes ()
-  "Discard all of the LLM suggestions."
-  (interactive)
-  (save-excursion
-    (goto-char (point-min))
-    (ignore-errors (funcall #'smerge-keep-upper))
-    (while (ignore-errors (not (smerge-next)))
-      (funcall #'smerge-keep-upper))))
+                   :system elysium-base-prompt
+                   :buffer chat-buffer
+                   :callback (apply-partially #'elysium-handle-response code-buffer))))
 
 (defun elysium-handle-response (code-buffer response info)
   "Handle the RESPONSE from gptel.
-The changes will be applied in a git merge format.  INFO is passed into
-this function from the `gptel-request' function."
+The changes will be applied to CODE-BUFFER in a git merge format.
+INFO is passed into this function from the `gptel-request' function."
   (when response
     (let* ((extracted-data (elysium-extract-changes response))
            (changes (plist-get extracted-data :changes))
@@ -327,6 +307,25 @@ The query is expected to be after the last '* ' (org-mode) or
         (when (re-search-backward heading-regex nil t)
           (let ((query-text (buffer-substring-no-properties (point) (point-max))))
             (string-trim query-text)))))))
+
+
+(defun elysium-keep-all-suggested-changes ()
+  "Keep all of the LLM suggestions."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (ignore-errors (funcall #'smerge-keep-lower))
+    (while (ignore-errors (not (smerge-next)))
+      (funcall #'smerge-keep-lower))))
+
+(defun elysium-discard-all-suggested-changes ()
+  "Discard all of the LLM suggestions."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (ignore-errors (funcall #'smerge-keep-upper))
+    (while (ignore-errors (not (smerge-next)))
+      (funcall #'smerge-keep-upper))))
 
 (defun elysium--ordinal (n)
   "Convert integer N to its ordinal string representation."
