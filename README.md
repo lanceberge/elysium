@@ -43,7 +43,7 @@ Elysium is now on Melpa!
 
 (use-package gptel
   :custom
-  (gptel-model "claude-3-5-sonnet-20240620")
+  (gptel-model 'claude-3-5-sonnet-20240620)
   :config
   (defun read-file-contents (file-path)
     "Read the contents of FILE-PATH and return it as a string."
