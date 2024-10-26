@@ -138,6 +138,7 @@ Must be a number between 0 and 1, exclusive."
       (other-window 1)
       (set-window-buffer (selected-window) elysium--chat-buffer))))
 
+;;;###autoload
 (defun elysium-query (user-query)
   "Send USER-QUERY to elysium from the current buffer or chat buffer."
   (interactive
