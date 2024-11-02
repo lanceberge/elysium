@@ -53,6 +53,11 @@ Must be a number between 0 and 1, exclusive."
                  (const :tag "Vertical" vertical)
                  (const :tag "None" nil)))
 
+(defcustom elysium-apply-changes-hook nil
+  "Hook run after code changes have been applied on a buffer."
+  :group 'elysium
+  :type 'hook)
+
 (defvar elysium--chat-buffer nil)
 
 (defvar elysium-base-prompt
@@ -291,7 +296,8 @@ subsequent inserted lines will need to be offset by
             (insert (format "=======\n%s\n>>>>>>> %s\n"
                             new-code
                             (gptel-backend-name gptel-backend)))
-            (setq offset (+ offset 3 (length new-lines)))))))))
+            (setq offset (+ offset 3 (length new-lines)))))))
+    (run-hooks 'elysium-apply-changes-hook)))
 
 ;; TODO this could probably be replaced with something already in gptel
 (defun elysium-parse-user-query (buffer)
