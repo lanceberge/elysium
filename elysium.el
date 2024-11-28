@@ -203,6 +203,7 @@ Must be a number between 0 and 1, exclusive."
 
     (gptel--update-status " Waiting..." 'warning)
     (message "Querying %s..." (gptel-backend-name gptel-backend))
+    (deactivate-mark)
     (save-excursion
       (with-current-buffer chat-buffer
         (goto-char (point-max))
