@@ -163,18 +163,35 @@ Must be a number between 0 and 1, exclusive."
             (elysium-parse-user-query chat-buffer)))
          (final-user-query (or user-query extracted-query
                                (user-error "No query provided")))
+         (start-pos (with-current-buffer code-buffer
+                      (if (use-region-p)
+                          (save-excursion
+                            (goto-char (region-beginning))
+                            ;; Always record from the beginning of the line
+                            (beginning-of-line)
+                            (point))
+                        (point-min))))
+         (end-pos (with-current-buffer code-buffer
+                    (if (use-region-p)
+                        (let ((start-of-line-p
+                               (let ((current-point (region-end)))
+                                 (save-excursion
+                                   (goto-char (region-end))
+                                   (beginning-of-line)
+                                   (equal current-point (line-beginning-position))))))
+                          ;; Always record to the end of the line
+                          (save-excursion
+                            (goto-char (region-end))
+                            (when start-of-line-p (forward-line -1))
+                            (end-of-line)
+                            (point)))
+                      (line-number-at-pos (point-max)))))
          (start-line (with-current-buffer code-buffer
-                       (if (use-region-p)
-                           (line-number-at-pos (region-beginning))
-                         1)))
+                       (line-number-at-pos start-pos)))
          (end-line (with-current-buffer code-buffer
-                     (if (use-region-p)
-                         (line-number-at-pos (region-end))
-                       (line-number-at-pos (point-max)))))
+                     (line-number-at-pos end-pos)))
          (selected-code (with-current-buffer code-buffer
-                          (if (use-region-p)
-                              (buffer-substring-no-properties (region-beginning) (region-end))
-                            (buffer-substring-no-properties (point-min) (point-max)))))
+                          (buffer-substring-no-properties start-pos end-pos)))
          (file-type (with-current-buffer code-buffer
                       (symbol-name major-mode)))
          (full-query (format "\n\nFile type: %s\nLine range: %d-%d\n\nCode:\n%s\n\n%s"
