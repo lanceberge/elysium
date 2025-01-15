@@ -333,6 +333,15 @@ The query is expected to be after the last '* ' (org-mode) or
           (let ((query-text (buffer-substring-no-properties (point) (point-max))))
             (string-trim query-text)))))))
 
+(defun elysium-clear-buffer ()
+  "Switch to the elysium buffer and clear it."
+  (interactive)
+  (unless (eq (current-buffer) (get-buffer elysium--chat-buffer))
+    (elysium-setup-windows))
+  (with-current-buffer elysium--chat-buffer
+    (erase-buffer)
+    (insert (gptel-prompt-prefix-string))))
+
 
 (defun elysium-keep-all-suggested-changes ()
   "Keep all of the LLM suggestions."
