@@ -212,9 +212,9 @@ Must be a number between 0 and 1, exclusive."
         (insert "\n\n")))
 
     (gptel-request full-query
-                   :system elysium-base-prompt
-                   :buffer chat-buffer
-                   :callback (apply-partially #'elysium-handle-response code-buffer))))
+      :system elysium-base-prompt
+      :buffer chat-buffer
+      :callback (apply-partially #'elysium-handle-response code-buffer))))
 
 (defun elysium-handle-response (code-buffer response info)
   "Handle the RESPONSE from gptel.
@@ -342,6 +342,24 @@ The query is expected to be after the last '* ' (org-mode) or
     (erase-buffer)
     (insert (gptel-prompt-prefix-string))))
 
+(defun elysium-add-context ()
+  "Add the selected region as context to the elysium chat buffer."
+  (interactive)
+  (if (not (region-active-p))
+      (message "No region selected")
+    (let ((content (buffer-substring-no-properties (region-beginning) (region-end))))
+      (elysium-setup-windows)
+      (with-current-buffer elysium--chat-buffer
+        (goto-char (point-max))
+        (insert "\n\n")
+        (let ((src-pattern
+               (cond
+                ((derived-mode-p 'markdown-mode)
+                 "```%s\n%s\n```")
+                ((derived-mode-p 'org-mode)
+                 "#+begin_src %s\n%s\n#+end_src")
+                (t "%s%s"))))
+          (insert (format src-pattern (symbol-name major-mode) content)))))))
 
 (defun elysium-keep-all-suggested-changes ()
   "Keep all of the LLM suggestions."
