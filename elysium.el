@@ -348,7 +348,9 @@ The query is expected to be after the last '* ' (org-mode) or
   (if (not (region-active-p))
       (message "No region selected")
     (let ((content (buffer-substring-no-properties (region-beginning) (region-end)))
-          (code-buffer-language (string-trim-right (symbol-name major-mode) "-mode$")))
+          (code-buffer-language
+           (string-trim-right
+            (string-trim-right (symbol-name major-mode) "-ts-mode$") "-mode$")))
       (elysium-setup-windows)
       (with-current-buffer elysium--chat-buffer
         (goto-char (point-max))
