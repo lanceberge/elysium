@@ -69,16 +69,18 @@ Use `smerge-mode` to then merge in the changes
 
 # Usage
 
-| Function                                | Description                             |
-| --------------------------------------- | --------------------------------------- |
-| `elysium-query`                         | send a query to the `gptel` backend     |
-| `elysium-keep-all-suggested-changes`    | keep all of the AI-suggested changes    |
-| `elysium-discard-all-suggested-changes` | discard all of the AI-suggested changes |
-| `smerge-next`                           | go to the next conflicting hunk         |
-| `smerge-previous`                       | go to the next conflicting hunk         |
-| `smerge-keep-other`                     | keep this set of changes                |
-| `smerge-keep-mine`                      | discard this set of changes             |
-| `elysium-toggle-window`                 | toggle the chat window                  |
+| Function                                | Description                                        |
+|-----------------------------------------|----------------------------------------------------|
+| `elysium-query`                         | send a query to the `gptel` backend                |
+| `elysium-keep-all-suggested-changes`    | keep all of the AI-suggested changes               |
+| `elysium-discard-all-suggested-changes` | discard all of the AI-suggested changes            |
+| `elysium-clear-buffer`                  | clear the elysium buffer                           |
+| `elysium-add-context`                   | add the contents of a region to the elysium buffer |
+| `smerge-next`                           | go to the next conflicting hunk                    |
+| `smerge-previous`                       | go to the next conflicting hunk                    |
+| `smerge-keep-other`                     | keep this set of changes                           |
+| `smerge-keep-mine`                      | discard this set of changes                        |
+| `elysium-toggle-window`                 | toggle the chat window                             |
 
 # Notes
 
