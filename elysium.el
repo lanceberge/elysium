@@ -347,11 +347,12 @@ The query is expected to be after the last '* ' (org-mode) or
   (interactive)
   (if (not (region-active-p))
       (message "No region selected")
-    (let ((content (buffer-substring-no-properties (region-beginning) (region-end))))
+    (let ((content (buffer-substring-no-properties (region-beginning) (region-end)))
+          (code-buffer-language (string-trim-right (symbol-name major-mode) "-mode$")))
       (elysium-setup-windows)
       (with-current-buffer elysium--chat-buffer
         (goto-char (point-max))
-        (insert "\n\n")
+        (insert "\n")
         (let ((src-pattern
                (cond
                 ((derived-mode-p 'markdown-mode)
@@ -359,7 +360,7 @@ The query is expected to be after the last '* ' (org-mode) or
                 ((derived-mode-p 'org-mode)
                  "#+begin_src %s\n%s\n#+end_src")
                 (t "%s%s"))))
-          (insert (format src-pattern (symbol-name major-mode) content)))))))
+          (insert (format src-pattern code-buffer-language content)))))))
 
 (defun elysium-keep-all-suggested-changes ()
   "Keep all of the LLM suggestions."
