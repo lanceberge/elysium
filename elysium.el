@@ -185,7 +185,7 @@ Must be a number between 0 and 1, exclusive."
                             (when start-of-line-p (forward-line -1))
                             (end-of-line)
                             (point)))
-                      (line-number-at-pos (point-max)))))
+                      (point-max))))
          (start-line (with-current-buffer code-buffer
                        (line-number-at-pos start-pos)))
          (end-line (with-current-buffer code-buffer
