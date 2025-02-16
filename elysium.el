@@ -345,24 +345,24 @@ The query is expected to be after the last '* ' (org-mode) or
 (defun elysium-add-context ()
   "Add the selected region as context to the elysium chat buffer."
   (interactive)
-  (if (not (region-active-p))
-      (message "No region selected")
-    (let ((content (buffer-substring-no-properties (region-beginning) (region-end)))
-          (code-buffer-language
-           (string-trim-right
-            (string-trim-right (symbol-name major-mode) "-ts-mode$") "-mode$")))
-      (elysium-setup-windows)
-      (with-current-buffer elysium--chat-buffer
-        (goto-char (point-max))
-        (insert "\n")
-        (let ((src-pattern
-               (cond
-                ((derived-mode-p 'markdown-mode)
-                 "```%s\n%s\n```")
-                ((derived-mode-p 'org-mode)
-                 "#+begin_src %s\n%s\n#+end_src")
-                (t "%s%s"))))
-          (insert (format src-pattern code-buffer-language content)))))))
+  (let ((content (if (region-active-p)
+                     (buffer-substring-no-properties (region-beginning) (region-end))
+                   (buffer-substring-no-properties (point-min) (point-max))))
+        (code-buffer-language
+         (string-trim-right
+          (string-trim-right (symbol-name major-mode) "-ts-mode$") "-mode$")))
+    (elysium-setup-windows)
+    (with-current-buffer elysium--chat-buffer
+      (goto-char (point-max))
+      (insert "\n")
+      (let ((src-pattern
+             (cond
+              ((derived-mode-p 'markdown-mode)
+               "```%s\n%s\n```")
+              ((derived-mode-p 'org-mode)
+               "#+begin_src %s\n%s\n#+end_src")
+              (t "%s%s"))))
+        (insert (format src-pattern code-buffer-language content))))))
 
 (defun elysium-keep-all-suggested-changes ()
   "Keep all of the LLM suggestions."
