@@ -207,8 +207,9 @@ Must be a number between 0 and 1, exclusive."
     (save-excursion
       (with-current-buffer chat-buffer
         (goto-char (point-max))
-        (unless in-chat-buffer
-          (insert final-user-query))
+        (when user-query
+	  (insert "\n\n")
+          (insert (concat (gptel-prompt-prefix-string) user-query)))
         (insert "\n\n")))
 
     (gptel-request full-query
