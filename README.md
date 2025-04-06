@@ -17,8 +17,6 @@ You can make queries on a region without leaving the the code buffer
 
 https://github.com/user-attachments/assets/73bd4c38-dc03-47b7-b943-a4b9b3203f06
 
-You can make queries on a region without leaving the the code buffer
-
 ![](./image/demo2.gif)
 
 # Installation
